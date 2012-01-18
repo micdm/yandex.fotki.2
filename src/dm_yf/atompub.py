@@ -4,7 +4,7 @@
 @author: Mic, 2012
 '''
 
-from xml.etree.ElementTree import fromstring
+from xml.etree.ElementTree import fromstring, tostring
 
 from dm_yf.http import HttpClient
 from dm_yf.log import logger
@@ -39,7 +39,7 @@ class Service(object):
         @return: Collection
         '''
         url = node.attrib['href']
-        return Collection(url)
+        return Collection(url, node)
     
     def _parse_collections(self, document):
         '''
@@ -71,12 +71,21 @@ class Collection(object):
     Коллекция
     '''
     
-    def __init__(self, url):
+    def __init__(self, url, node):
         '''
         @param url: string
+        @param node: Element
         '''
         self._http_client = HttpClient()
         self._url = url
+        self._node = node
+        
+    def get_node(self):
+        '''
+        Возвращает ноду коллекции.
+        @return: Element
+        '''
+        return self._node
 
     def _get_document(self):
         '''
@@ -92,7 +101,7 @@ class Collection(object):
         @return: Entry
         '''
         url = node.find('{%s}link[@rel="edit"]'%ATOM_NS).attrib['href']
-        return Entry(url)
+        return Entry(url, node)
     
     def _parse_entries(self, document):
         '''
@@ -124,13 +133,21 @@ class Entry(object):
     Элемент.
     '''
     
-    def __init__(self, url):
+    def __init__(self, url, node):
         '''
         @param url: string
+        @param node: Element
         '''
         self._http_client = HttpClient()
         self._url = url
+        self._node = node
         
+    def get_node(self):
+        '''
+        Возвращает ноду элемента.
+        @return: Element
+        '''
+        return self._node
 
     def _get_document(self):
         '''

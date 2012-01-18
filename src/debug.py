@@ -1,6 +1,7 @@
 # encoding=utf8
 
-from dm_yf.atompub import Entry
+from dm_yf.fotki import User
 
-entry = Entry('http://api-fotki.yandex.ru/api/users/demerzov/album/134277/')
-print entry.get()
+user = User()
+albums = user.get_albums()
+user.add_album('test-test')
