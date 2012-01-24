@@ -126,6 +126,15 @@ class Collection(object):
         logger.debug('loading entries for collection %s', self._url)
         document = self._get_document()
         return self._parse_entries(document)
+    
+    def add_entry(self, node):
+        '''
+        Добавляет новый элемент.
+        @param node: Element
+        '''
+        data = tostring(node)
+        headers = {'Content-Type': 'application/atom+xml; charset=utf-8; type=entry'}
+        self._http_client.request(self._url, data, headers)
 
 
 class Entry(object):

@@ -54,7 +54,8 @@ class AlbumListLoader(object):
         Загружает список альбомов.
         @return: AlbumList
         '''
-        logger.info('loading albums')
+        logger.info('loading album list')
         collection = self._get_album_collection()
         albums = map(self._get_album_from_entry, collection.get_entries())
-        return AlbumList(albums)
+        logger.info('album list loaded (%s)', len(albums))
+        return AlbumList(albums, collection)

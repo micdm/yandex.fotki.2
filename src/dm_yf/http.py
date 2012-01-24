@@ -14,24 +14,26 @@ class HttpClient(object):
     HTTP-загрузчик.
     '''
     
-    def _get_headers(self):
+    def _get_headers(self, headers):
         '''
         Возвращает заголовки для запроса (в частности, для авторизации).
         @return: string
         '''
-        headers = {}
+        if headers is None:
+            headers = {}
         headers['Authorization'] = 'OAuth %s'%OAuth.get_token()
         return headers
     
-    def request(self, url):
+    def request(self, url, data=None, headers=None):
         '''
         Выполняет запрос и возвращает тело ответа.
         @param url: string
+        @param data: string
         @return: string
         '''
         logger.debug('loading url %s', url)
-        headers = self._get_headers()
-        request = Request(url, headers=headers)
+        headers = self._get_headers(headers)
+        request = Request(url, data, headers)
         response = urlopen(request).read()
         logger.debug('%s bytes loaded from url %s', len(response), url)
         return response
