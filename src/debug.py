@@ -1,7 +1,6 @@
 # encoding=utf8
 
-from dm_yf.fotki import User
+from dm_yf.fotki import AlbumList
 
-user = User()
-albums = user.get_albums()
-user.add_album('test-test')
+album_list = AlbumList()
+print album_list.get()
