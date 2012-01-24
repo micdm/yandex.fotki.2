@@ -1,6 +1,6 @@
 # encoding=utf8
 
-from dm_yf.fotki import AlbumList
+from dm_yf.loaders import AlbumListLoader
 
-album_list = AlbumList()
-print album_list.get()
+album_list = AlbumListLoader().load()
+print album_list.get_albums()

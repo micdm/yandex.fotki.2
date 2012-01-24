@@ -5,7 +5,8 @@
 '''
 
 from dm_yf.atompub import Service, ATOM_NS
-from dm_yf.fotki import Album
+from dm_yf.fotki import AlbumList, Album 
+from dm_yf.log import logger
 
 # Адрес сервисного документа:
 SERVICE_URL = 'http://api-fotki.yandex.ru/api/me/'
@@ -46,12 +47,14 @@ class AlbumListLoader(object):
         node = entry.get_node()
         title = node.find('{%s}title'%ATOM_NS).text.encode('utf8')
         photo_count = int(node.find('{%s}image-count'%FOTKI_NS).attrib['value'])
-        return Album(entry, title, photo_count)
+        return Album(title, photo_count)
     
     def load(self):
         '''
         Загружает список альбомов.
         @return: AlbumList
         '''
+        logger.info('loading albums')
         collection = self._get_album_collection()
-        return map(self._get_album_from_entry, collection.get_entries())
+        albums = map(self._get_album_from_entry, collection.get_entries())
+        return AlbumList(albums)

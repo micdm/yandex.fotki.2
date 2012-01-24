@@ -4,22 +4,16 @@ from httplib import HTTPSConnection
 import json
 from urllib import urlencode
 
+from dm_yf.log import logger
 from settings import CLIENT_ID, CLIENT_SECRET, TOKEN
 
 class OAuth(object):
     '''
     Класс для OAuth-авторизации.
     '''
-    
+
+    # Токен:
     _token = None
-    
-    @classmethod
-    def get_auth_url(cls):
-        '''
-        Возвращает адрес, где нужно получить код.
-        @return: string
-        '''
-        return 'https://oauth.yandex.ru/authorize?response_type=code&client_id=%s'%CLIENT_ID
     
     @classmethod
     def _get_loaded_token(cls):
@@ -34,14 +28,23 @@ class OAuth(object):
         return None
     
     @classmethod
-    def _load_token(cls, auth_code):
+    def _get_auth_url(cls):
         '''
-        Загружает новый токен.
-        @param auth_code: string
+        Возвращает адрес, где нужно получить код.
         @return: string
         '''
-        if auth_code is None:
-            raise Exception('auth code must be set')
+        return 'https://oauth.yandex.ru/authorize?response_type=code&client_id=%s'%CLIENT_ID
+    
+    @classmethod
+    def _load_token(cls):
+        '''
+        Загружает новый токен.
+        @return: string
+        '''
+        logger.debug('loading token')
+        logger.info('please copy an auth code from %s', cls._get_auth_url())
+        auth_code = raw_input()
+        logger.debug('auth code is %s', auth_code)
         connection = HTTPSConnection('oauth.yandex.ru')
         body = urlencode({
             'grant_type': 'authorization_code',
@@ -52,10 +55,12 @@ class OAuth(object):
         connection.request('POST', '/token', body)
         response = connection.getresponse().read()
         result = json.loads(response)
-        return result['access_token']
+        token = result['access_token']
+        logger.debug('token loaded: %s', token)
+        return token
     
     @classmethod
-    def get_token(cls, auth_code=None):
+    def get_token(cls):
         '''
         Получает токен для указанного кода.
         @return: string
@@ -63,5 +68,6 @@ class OAuth(object):
         token = cls._get_loaded_token()
         if token is not None:
             return token
-        cls._token = cls._load_token(auth_code)
+        cls._token = cls._load_token()
+        logger.info('please put in this token into your settings_local.py: %s', cls._token)
         return cls._token
