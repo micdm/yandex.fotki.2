@@ -4,18 +4,19 @@
 @author: Mic, 2012
 '''
 
+# Пространство имен:
+FOTKI_NS = 'yandex:fotki'
+
 class AlbumList(object):
     '''
     Список альбомов.
     '''
 
-    def __init__(self, albums, collection):
+    def __init__(self, albums):
         '''
         @param albums: list
-        @param collection: Collection
         '''
         self._albums = albums
-        self._collection = collection
         
     def get_albums(self):
         '''
@@ -23,26 +24,28 @@ class AlbumList(object):
         @return: list
         '''
         return self._albums
-    
-    def get_collection(self):
-        '''
-        Возвращает коллекцию альбомов.
-        @return: Collection
-        '''
-        return self._collection
-    
+
     def add(self, album):
         '''
         Добавляет новый альбом.
         @param album: Album
         '''
         self._albums.append(album)
+        album.set_state(Album.STATE_NEW)
         
-    def delete(self):
+    def delete(self, album):
         '''
         Удаляет альбом.
+        @param album: Album
         '''
-        raise NotImplementedError()
+        index = self._albums.index(album)
+        self._albums[index].set_state(Album.STATE_DELETED)
+        
+    def clean(self):
+        '''
+        Очищает список, убирая альбомы, помеченные удаленными.
+        '''
+        self._albums = [album for album in self._albums if album.get_state() != Album.STATE_DELETED]
 
 
 class Album(object):
@@ -54,12 +57,14 @@ class Album(object):
     STATE_SYNCED = 'synced'
     STATE_DELETED = 'deleted'
     
-    def __init__(self, title, photo_count=0, state=STATE_SYNCED):
+    def __init__(self, id, title, photo_count=0, state=STATE_SYNCED):
         '''
+        @param id: string
         @param title: string
         @param photo_count: int
         @param state: string
         '''
+        self._id = id
         self._title = title
         self._photo_count = photo_count
         self._state = state
@@ -69,10 +74,10 @@ class Album(object):
         
     def __eq__(self, other):
         '''
-        Будем считать альбомы одинаковыми, если у них совпадает название.
+        Будем считать альбомы одинаковыми, если у них совпадают идентификаторы.
         @param other: Album
         '''
-        return self._title == other.get_title()
+        return self._id == other.get_id()
         
     @classmethod
     def create(cls, title):
@@ -81,7 +86,21 @@ class Album(object):
         @param title: string
         @return: Album
         '''
-        return cls(title, state=cls.STATE_NEW)
+        return cls(None, title, state=cls.STATE_NEW)
+    
+    def get_id(self):
+        '''
+        Возвращает идентификатор альбома.
+        @return: string
+        '''
+        return self._id
+    
+    def set_id(self, id):
+        '''
+        Задает идентификатор альбома.
+        @param id: string
+        '''
+        self._id = id
     
     def get_title(self):
         '''

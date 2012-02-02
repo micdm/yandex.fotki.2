@@ -4,24 +4,21 @@
 @author: Mic, 2012
 '''
 
-from xml.etree.ElementTree import tostring, Element, TreeBuilder
+from xml.etree.ElementTree import Element, TreeBuilder
 
 from dm_yf.atompub import ATOM_NS
+from dm_yf.converters import AlbumConverter
 from dm_yf.fotki import Album
 from dm_yf.log import logger
-from dm_yf.http import HttpClient
+from dm_yf.user import User
 
-class AlbumListStore(object):
+class AlbumListStorer(object):
     '''
     Сохранение списка альбомов.
     '''
     
-    def __init__(self, album_list):
-        '''
-        @param album_list: AlbumList
-        '''
-        self._http_client = HttpClient()
-        self._album_list = album_list
+    def __init__(self):
+        self._album_list = None
         
     def _get_node_from_album(self, album):
         '''
@@ -44,16 +41,33 @@ class AlbumListStore(object):
         '''
         logger.debug('album %s is new, creating', album)
         node = self._get_node_from_album(album)
-        collection = self._album_list.get_collection()
-        collection.add_entry(node)
+        collection = User.get_album_collection()
+        entry = collection.add_entry(node)
+        new_album = AlbumConverter.from_entry(entry)
+        album.set_id(new_album.get_id())
         album.set_state(Album.STATE_SYNCED)
+        
+    def _get_album_entry(self, collection, album):
+        '''
+        Находит элемент, соответствующий альбому.
+        @param collection: Collection
+        @param album: Album
+        @return: Entry
+        '''
+        for entry in collection.get_entries():
+            if album.get_id() == entry.get_id():
+                return entry
+        return None
     
     def _delete_album(self, album):
         '''
         Удаляет альбом.
         @param album: Album
         '''
-        raise NotImplementedError()
+        logger.debug('deleting album %s', album)
+        collection = User.get_album_collection()
+        entry = self._get_album_entry(collection, album)
+        collection.delete_entry(entry)
     
     def _store_album(self, album):
         '''
@@ -69,12 +83,15 @@ class AlbumListStore(object):
         if state == Album.STATE_DELETED:
             self._delete_album(album)
     
-    def store(self):
+    def store(self, album_list):
         '''
         Сохраняет список альбомов.
         @param album_list: AlbumList
         '''
         logger.info('storing album list')
-        albums = self._album_list.get_albums()
+        self._album_list = album_list
+        albums = album_list.get_albums()
         for album in albums:
             self._store_album(album)
+        album_list.clean()
+        logger.info('album list stored')
