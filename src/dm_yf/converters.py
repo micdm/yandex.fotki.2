@@ -7,12 +7,12 @@
 from xml.etree.ElementTree import QName
 
 from dm_yf.atompub import ATOM_NS
-from dm_yf.fotki import Album, FOTKI_NS
+from dm_yf.fotki import FOTKI_NS, Album, Photo
 
 class AlbumConverter(object):
     
     @classmethod
-    def _get_album_id(cls, node):
+    def _get_id(cls, node):
         '''
         Возвращает идентификатор альбома.
         @param node: Element
@@ -22,7 +22,7 @@ class AlbumConverter(object):
         return node.find(qname).text.encode('utf8')
     
     @classmethod
-    def _get_album_title(cls, node):
+    def _get_title(cls, node):
         '''
         Возвращает название альбома.
         @param node: Element
@@ -32,7 +32,7 @@ class AlbumConverter(object):
         return node.find(qname).text.encode('utf8')
     
     @classmethod
-    def _get_album_photo_count(cls, node):
+    def _get_photo_count(cls, node):
         '''
         Возвращает количество фотографий в альбоме.
         @param node: Element
@@ -49,7 +49,42 @@ class AlbumConverter(object):
         @return: Album
         '''
         node = entry.get_node()
-        id = cls._get_album_id(node)
-        title = cls._get_album_title(node)
-        photo_count = cls._get_album_photo_count(node)
+        id = cls._get_id(node)
+        title = cls._get_title(node)
+        photo_count = cls._get_photo_count(node)
         return Album(id, title, photo_count)
+
+
+class PhotoConverter(object):
+    
+    @classmethod
+    def _get_id(cls, node):
+        '''
+        Возвращает идентификатор фотографии.
+        @param node: Element
+        @return: string
+        '''
+        qname = str(QName(ATOM_NS, 'id'))
+        return node.find(qname).text.encode('utf8')
+    
+    @classmethod
+    def _get_title(cls, node):
+        '''
+        Возвращает название фотографии.
+        @param node: Element
+        @return: string
+        '''
+        qname = str(QName(ATOM_NS, 'title'))
+        return node.find(qname).text.encode('utf8')
+    
+    @classmethod
+    def from_entry(cls, entry):
+        '''
+        Собирает фотографию из atompub-элемента.
+        @param entry: Entry
+        @return: Photo
+        '''
+        node = entry.get_node()
+        id = cls._get_id(node)
+        title = cls._get_title(node)
+        return Photo(id, title)

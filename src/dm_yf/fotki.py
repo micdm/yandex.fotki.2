@@ -12,17 +12,17 @@ class AlbumList(object):
     Список альбомов.
     '''
 
-    def __init__(self, albums):
-        '''
-        @param albums: list
-        '''
-        self._albums = albums
+    def __init__(self):
+        self._albums = None
         
     def get_albums(self):
         '''
         Возвращает список альбомов.
         @return: list
         '''
+        if self._albums is None:
+            from dm_yf.loaders import AlbumListLoader
+            self._albums = AlbumListLoader.load()
         return self._albums
 
     def add(self, album):
@@ -64,6 +64,7 @@ class Album(object):
         @param photo_count: int
         @param state: string
         '''
+        self._photos = None
         self._id = id
         self._title = title
         self._photo_count = photo_count
@@ -128,10 +129,35 @@ class Album(object):
         Возвращает список фотографий.
         @return: list
         '''
-        raise NotImplementedError()
+        if self._photos is None:
+            from dm_yf.loaders import PhotoListLoader
+            self._photos = PhotoListLoader.load(self)
+        return self._photos
 
 
 class Photo(object):
     '''
     Фотография.
     '''
+    
+    def __init__(self, id, title):
+        '''
+        @param id: string
+        @param title: string
+        '''
+        self._id = id
+        self._title = title
+        
+    def get_id(self):
+        '''
+        Возвращает идентификатор фотографии.
+        @return: string
+        '''
+        return self._id
+    
+    def get_title(self):
+        '''
+        Возвращает название фотографии.
+        @return: string
+        '''
+        return self._title

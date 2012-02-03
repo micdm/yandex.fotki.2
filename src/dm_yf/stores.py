@@ -11,6 +11,7 @@ from dm_yf.converters import AlbumConverter
 from dm_yf.fotki import Album
 from dm_yf.log import logger
 from dm_yf.user import User
+import dm_yf.utils as utils
 
 class AlbumListStorer(object):
     '''
@@ -46,19 +47,7 @@ class AlbumListStorer(object):
         new_album = AlbumConverter.from_entry(entry)
         album.set_id(new_album.get_id())
         album.set_state(Album.STATE_SYNCED)
-        
-    def _get_album_entry(self, collection, album):
-        '''
-        Находит элемент, соответствующий альбому.
-        @param collection: Collection
-        @param album: Album
-        @return: Entry
-        '''
-        for entry in collection.get_entries():
-            if album.get_id() == entry.get_id():
-                return entry
-        return None
-    
+
     def _delete_album(self, album):
         '''
         Удаляет альбом.
@@ -66,7 +55,7 @@ class AlbumListStorer(object):
         '''
         logger.debug('deleting album %s', album)
         collection = User.get_album_collection()
-        entry = self._get_album_entry(collection, album)
+        entry = utils.get_album_entry(collection, album)
         collection.delete_entry(entry)
     
     def _store_album(self, album):

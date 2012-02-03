@@ -80,12 +80,30 @@ class Collection(object):
         self._url = url
         self._node = node
         
+    @classmethod
+    def load(cls, url):
+        '''
+        Загружает коллекцию по указанному адресу.
+        @param url: string
+        @return: Collection
+        '''
+        return cls(url, None)
+        
     def get_node(self):
         '''
         Возвращает ноду коллекции.
         @return: Element
         '''
         return self._node
+    
+    def get_url(self, rel):
+        '''
+        Возвращает адрес.
+        @param rel: string
+        @return: string
+        '''
+        qname = str(QName(ATOM_NS, 'link'))
+        return self._node.find('%s[@rel="%s"]'%(qname, rel)).attrib['href']
 
     def _get_document(self):
         '''
@@ -223,6 +241,15 @@ class Entry(object):
         @return: Element
         '''
         return self._node
+    
+    def get_url(self, rel):
+        '''
+        Возвращает адрес.
+        @param rel: string
+        @return: string
+        '''
+        qname = str(QName(ATOM_NS, 'link'))
+        return self._node.find('%s[@rel="%s"]'%(qname, rel)).attrib['href']
 
     def _get_document(self):
         '''
