@@ -1,6 +1,6 @@
 # encoding=utf8
 '''
-Классы для работы с atompub.
+Обмен данными с сервером.
 @author: Mic, 2012
 '''
 
@@ -14,28 +14,56 @@ APP_NS = 'http://www.w3.org/2007/app'
 ATOM_NS = 'http://www.w3.org/2005/Atom'
 
 def _get_document(url):
+    '''
+    Загружает документ по указанному адресу.
+    @param url: string
+    @return: string
+    '''
     http_client = HttpClient()
     return http_client.request(url)
 
 def _parse_resource_url(node, rel):
+    '''
+    Получает адрес ресурса.
+    @param node: Element
+    @param rel: string
+    @return: string
+    '''
     qname = str(QName(ATOM_NS, 'link'))
     return node.find('%s[@rel="%s"]'%(qname, rel)).attrib['href']
 
 
 class Service(object):
+    '''
+    Сервис.
+    '''
 
+    # Список уже загруженных сервисов:
     _services = {}
 
     @classmethod
     def get(cls, url):
+        '''
+        Фабрика сервисов.
+        @param url: string
+        @return: Service
+        '''
         if url not in cls._services:
             cls._services[url] = cls(url)
         return cls._services[url]
 
     def __init__(self, url):
+        '''
+        @param url: string
+        '''
         self._url = url
 
     def _get_resource_url(self, resource_id):
+        '''
+        Возвращает адрес ресурса с указанным идентификатором.
+        @param resource_id: string
+        @return: string
+        '''
         document = _get_document(self._url)
         root = fromstring(document)
         for node in root.findall('.//%s'%QName(APP_NS, 'collection')):
@@ -44,26 +72,56 @@ class Service(object):
         return None
     
     def _load_resource(self, url):
+        '''
+        Загружает ресур по указанному адресу.
+        @param url: string
+        @return: string
+        '''
         document = _get_document(url)
         root = fromstring(document)
         return Resource(root)
     
     def get_resource(self, resource_id):
+        '''
+        Возвращает ресурс с указанным идентификатором.
+        @param resource_id: string
+        @return: Resource
+        '''
         logger.debug('loading resource %s for service %s', resource_id, self._url)
         url = self._get_resource_url(resource_id)
         return self._load_resource(url)
 
 
 class Resource(object):
+    '''
+    Ресурс.
+    '''
     
     def __init__(self, node):
+        '''
+        @param node: Element
+        '''
         self._resources = None
         self._node = node
-        
-    def get_node(self):
-        return self._node
+
+    def get_property(self, name):
+        '''
+        Возвращает свойство ресурса.
+        @param name: string
+        @return: string
+        '''
+        qname = str(QName(ATOM_NS, name))
+        property_node = self._node.find(qname)
+        if property_node is None:
+            return None
+        return property_node.text
         
     def _parse_resources(self, root):
+        '''
+        Разбирает список ресурсов.
+        @param root: Element
+        @return: list
+        '''
         resources = []
         qname = str(QName(ATOM_NS, 'entry'))
         for node in root.findall(qname):
@@ -72,16 +130,30 @@ class Resource(object):
         return resources
     
     def _get_resources(self, rel):
+        '''
+        Загружает список ресурсов.
+        @param rel: string
+        @return: list
+        '''
         url = _parse_resource_url(self._node, rel)
         document = _get_document(url)
         root = fromstring(document)
         return self._parse_resources(root)
 
     def get_resources(self, rel):
+        '''
+        Возвращает список ресурсов, содержащихся в данном.
+        @param rel: string
+        @return: list
+        '''
         if self._resources is None:
             self._resources = self._get_resources(rel)
         return self._resources
     
     def get_media(self):
+        '''
+        Возвращает прикрепленное медиа-содержимое.
+        @return: string
+        '''
         url = _parse_resource_url(self._node, 'edit-media')
         return _get_document(url)
