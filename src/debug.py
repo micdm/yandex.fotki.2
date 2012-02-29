@@ -1,12 +1,9 @@
 # encoding=utf8
 
-from dm_yf.stores import AlbumListStorer
-from dm_yf.user import User
+from dm_yf.models import AlbumList
 
-album_list = User.get_album_list()
-albums = album_list.get_albums()
-
-album = albums[0]
-print album.get_title()
-print album.get_photos()
-
+album_list = AlbumList.get()
+for album in album_list.get_albums():
+    print album
+    for photo in album.get_photos():
+        print photo
