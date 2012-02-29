@@ -187,6 +187,18 @@ class AlbumResource(Resource):
             logger.error('album title not found')
             return None
         return title_node.text.encode('utf8')
+    
+    def get_image_count(self):
+        '''
+        Возвращает количество фотографий в альбоме без их предварительной загрузки.
+        @return: int
+        '''
+        qname = str(QName(FOTKI_NS, 'image-count'))
+        image_count_node = self._node.find(qname)
+        if image_count_node is None:
+            logger.error('image count not found')
+            return None
+        return int(image_count_node.attrib['value'])
 
 
 class PhotoResource(Resource):

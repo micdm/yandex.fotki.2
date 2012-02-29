@@ -6,7 +6,7 @@
 
 from logging import getLogger, DEBUG, StreamHandler, Formatter
 
-formatter = Formatter('%(asctime)s %(message)s')
+formatter = Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
 handler = StreamHandler()
 handler.setFormatter(formatter)

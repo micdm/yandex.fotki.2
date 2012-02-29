@@ -68,7 +68,7 @@ class Album(object):
         self._resource = resource
         
     def __str__(self):
-        return '<Album "%s">'%self.get_title()
+        return '<Album "%s" (%s)>'%(self.get_title(), self.get_image_count())
         
     def get_title(self):
         '''
@@ -76,6 +76,13 @@ class Album(object):
         @return: string
         '''
         return self._resource.get_title()
+    
+    def get_image_count(self):
+        '''
+        Возвращает количество фотографий в альбоме.
+        @return: int
+        '''
+        return self._resource.get_image_count()
     
     def _get_photos(self):
         '''
@@ -111,7 +118,7 @@ class Photo(object):
         self._resource = resource
         
     def __str__(self):
-        return '<Photo "%s">'%self.get_title().encode('utf8')
+        return '<Photo "%s" (%sM)>'%(self.get_title().encode('utf8'), self.get_size(True))
         
     def get_title(self):
         '''
@@ -120,12 +127,15 @@ class Photo(object):
         '''
         return self._resource.get_title()
     
-    def get_size(self):
+    def get_size(self, as_megabytes=False):
         '''
         Возвращает размер фотографии в байтах.
         @return: int
         '''
-        return self._resource.get_size()
+        size = self._resource.get_size()
+        if as_megabytes:
+            return round(float(size) / 2**20, 2)
+        return size
         
     def get_image(self):
         '''
