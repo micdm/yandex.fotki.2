@@ -12,6 +12,7 @@ from dm_yf.log import logger
 # Пространства имен:
 APP_NS = 'http://www.w3.org/2007/app'
 ATOM_NS = 'http://www.w3.org/2005/Atom'
+FOTKI_NS = 'yandex:fotki'
 
 def _get_document(url):
     '''
@@ -31,6 +32,23 @@ def _parse_resource_url(node, rel):
     '''
     qname = str(QName(ATOM_NS, 'link'))
     return node.find('%s[@rel="%s"]'%(qname, rel)).attrib['href']
+
+def _parse_resource(node):
+    qname = str(QName(ATOM_NS, 'id'))
+    resource_id_node = node.find(qname)
+    if resource_id_node is None:
+        logger.error('resource id expected to be but not found')
+        return None
+    resource_id_parts = resource_id_node.text.split(':')
+    resource_type = resource_id_parts[4]
+    if resource_type == 'albums':
+        return AlbumListResource(node)
+    if resource_type == 'album':
+        return AlbumResource(node)
+    if resource_type == 'photo':
+        return PhotoResource(node)
+    logger.error('unknown resource type "%s"', resource_type)
+    return None
 
 
 class Service(object):
@@ -79,7 +97,7 @@ class Service(object):
         '''
         document = _get_document(url)
         root = fromstring(document)
-        return Resource(root)
+        return _parse_resource(root)
     
     def get_resource(self, resource_id):
         '''
@@ -103,18 +121,15 @@ class Resource(object):
         '''
         self._resources = None
         self._node = node
-
-    def get_property(self, name):
+        
+    def _get_node_by_name(self, name):
         '''
-        Возвращает свойство ресурса.
+        Возвращает элемент по имени тега.
         @param name: string
         @return: string
         '''
         qname = str(QName(ATOM_NS, name))
-        property_node = self._node.find(qname)
-        if property_node is None:
-            return None
-        return property_node.text
+        return self._node.find(qname)
         
     def _parse_resources(self, root):
         '''
@@ -125,7 +140,7 @@ class Resource(object):
         resources = []
         qname = str(QName(ATOM_NS, 'entry'))
         for node in root.findall(qname):
-            resource = Resource(node)
+            resource = _parse_resource(node)
             resources.append(resource)
         return resources
     
@@ -149,15 +164,67 @@ class Resource(object):
         if self._resources is None:
             self._resources = self._get_resources(rel)
         return self._resources
+
+
+class AlbumListResource(Resource):
+    '''
+    Ресурс списка альбомов.
+    '''
+
+
+class AlbumResource(Resource):
+    '''
+    Ресурс альбома.
+    '''
     
-    def get_media(self):
+    def get_title(self):
+        '''
+        Возвращает название альбома.
+        @return: string
+        '''
+        title_node = self._get_node_by_name('title')
+        if title_node is None:
+            logger.error('album title not found')
+            return None
+        return title_node.text.encode('utf8')
+
+
+class PhotoResource(Resource):
+    '''
+    Ресурс фотографии.
+    '''
+    
+    def get_title(self):
+        '''
+        Возвращает название фотографии.
+        @return: string
+        '''
+        title_node = self._get_node_by_name('title')
+        if title_node is None:
+            logger.error('photo title not found')
+            return None
+        return title_node.text.encode('utf8')
+
+    def get_size(self):
+        '''
+        Возвращает размер фотографии в байтах.
+        @return: int
+        '''
+        qname = str(QName(FOTKI_NS, 'img'))
+        img_node = self._node.find('%s[@size="orig"]'%qname)
+        if img_node is None:
+            logger.error('image size value not found')
+            return None
+        return int(img_node.attrib['bytesize'])
+
+    def get_content(self):
         '''
         Возвращает прикрепленное медиа-содержимое.
         @return: string
         '''
-        qname = str(QName(ATOM_NS, 'content'))
-        content_node = self._node.find(qname)
+        content_node = self._get_property('content')
         if content_node is None:
+            logger.error('attached media not found')
             return None
         url = content_node.attrib['src']
         return _get_document(url)

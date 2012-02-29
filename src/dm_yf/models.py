@@ -75,7 +75,7 @@ class Album(object):
         Возвращает название альбома.
         @return: string
         '''
-        return self._resource.get_property('title').encode('utf8')
+        return self._resource.get_title()
     
     def _get_photos(self):
         '''
@@ -118,11 +118,18 @@ class Photo(object):
         Возвращает название фотографии.
         @return: string
         '''
-        return self._resource.get_property('title')
+        return self._resource.get_title()
+    
+    def get_size(self):
+        '''
+        Возвращает размер фотографии в байтах.
+        @return: int
+        '''
+        return self._resource.get_size()
         
     def get_image(self):
         '''
         Возвращает тело фотографии.
         @return: string
         '''
-        return self._resource.get_media()
+        return self._resource.get_content()

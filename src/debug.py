@@ -7,3 +7,4 @@ for album in album_list.get_albums():
     print album
     for photo in album.get_photos():
         print photo
+        print photo.get_size()
