@@ -155,5 +155,9 @@ class Resource(object):
         Возвращает прикрепленное медиа-содержимое.
         @return: string
         '''
-        url = _parse_resource_url(self._node, 'edit-media')
+        qname = str(QName(ATOM_NS, 'content'))
+        content_node = self._node.find(qname)
+        if content_node is None:
+            return None
+        url = content_node.attrib['src']
         return _get_document(url)
