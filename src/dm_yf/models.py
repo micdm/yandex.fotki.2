@@ -14,10 +14,12 @@ class AlbumList(object):
     Список альбомов.
     '''
     
+    _album_list = None
+    
     @classmethod
-    def get(cls):
+    def _get(cls):
         '''
-        Фабрика списков альбомов.
+        Создает новый объект списка альбомов.
         @return: AlbumList
         '''
         service = Service.get(SERVICE_URL)
@@ -25,6 +27,16 @@ class AlbumList(object):
         if resource is None:
             return None
         return cls(resource)
+    
+    @classmethod
+    def get(cls):
+        '''
+        Синглтон.
+        @return: AlbumList
+        '''
+        if cls._album_list is None:
+            cls._album_list = cls._get()
+        return cls._album_list
     
     def __init__(self, resource):
         '''
@@ -53,6 +65,14 @@ class AlbumList(object):
         if self._albums is None:
             self._albums = self._get_albums()
         return self._albums
+    
+    def add_album(self, title):
+        '''
+        Добавляет новый альбом.
+        @param title: string
+        '''
+        self._resource.add_album(title)
+        self._albums = None
 
 
 class Album(object):

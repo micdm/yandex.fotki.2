@@ -4,7 +4,7 @@
 @author: Mic, 2012
 '''
 
-from xml.etree.ElementTree import fromstring, QName
+from xml.etree.ElementTree import fromstring, tostring, Element, TreeBuilder, QName
 
 from dm_yf.http import HttpClient
 from dm_yf.log import logger
@@ -23,6 +23,18 @@ def _get_document(url):
     http_client = HttpClient()
     return http_client.request(url)
 
+def _send_document(url, body, headers):
+    '''
+    Отправляет документ на указанный адрес.
+    Возвращает ответ сервера.
+    @param url: string
+    @param body: string
+    @param headers: dict
+    @return: string
+    '''
+    http_client = HttpClient()
+    return http_client.request(url, body, headers, 'POST')
+
 def _parse_resource_url(node, rel):
     '''
     Получает адрес ресурса.
@@ -34,6 +46,11 @@ def _parse_resource_url(node, rel):
     return node.find('%s[@rel="%s"]'%(qname, rel)).attrib['href']
 
 def _parse_resource(node):
+    '''
+    Создает объект ресурса в зависимости от его типа.
+    @param node: Element
+    @return: Resource
+    '''
     qname = str(QName(ATOM_NS, 'id'))
     resource_id_node = node.find(qname)
     if resource_id_node is None:
@@ -170,6 +187,40 @@ class AlbumListResource(Resource):
     '''
     Ресурс списка альбомов.
     '''
+    
+    def _get_new_album_headers(self):
+        '''
+        Возвращает заголовки для создания нового альбома.
+        @return dict
+        '''
+        return {
+            'Content-Type': 'application/atom+xml; charset=utf-8; type=entry'
+        }
+    
+    def _get_new_album_body(self, title):
+        '''
+        Формирует XML-элемент для нового альбома.
+        @param title: string
+        @return Element
+        '''
+        builder = TreeBuilder(Element)
+        builder.start('entry', {'xmlns': ATOM_NS})
+        builder.start('title', {})
+        builder.data(title.decode('utf8'))
+        builder.end('title')
+        builder.end('entry')
+        node = builder.close()
+        return tostring(node)
+
+    def add_album(self, title):
+        '''
+        Добавляет новый альбом.
+        @param title: string
+        '''
+        url = _parse_resource_url(self._node, 'self')
+        headers = self._get_new_album_headers()
+        body = self._get_new_album_body(title)
+        _send_document(url, body, headers)
 
 
 class AlbumResource(Resource):
