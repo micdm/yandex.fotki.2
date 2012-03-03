@@ -74,8 +74,12 @@ class LocalSynchronizer(object):
         logger.info('synchronizing photo #%s of album %s', photo_index, album)
         path_to_photo = self._get_path_to_photo(album, photo_index)
         if os.path.exists(path_to_photo):
-            logger.debug('photo #%s already exist, skipping', photo_index)
-            return
+            if os.path.getsize(path_to_photo) == photo.get_size():
+                logger.debug('photo #%s already exists, skipping', photo_index)
+                return
+            else:
+                logger.warning('photo #%s already exists but has different size', photo_index)
+                return
         self._store_image(path_to_photo, photo)
         logger.debug('synchronizing photo #%s of album %s complete', photo_index, album)
     

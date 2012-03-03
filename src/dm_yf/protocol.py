@@ -171,7 +171,7 @@ class Resource(object):
         @param rel: string
         @return: list
         '''
-        url = _parse_resource_url(self._node, rel)
+        url = '%s/rpublished/'%_parse_resource_url(self._node, rel)
         document = _get_document(url)
         root = fromstring(document)
         return self._parse_resources(root)
