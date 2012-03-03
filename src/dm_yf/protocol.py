@@ -23,17 +23,21 @@ def _get_document(url):
     http_client = HttpClient()
     return http_client.request(url)
 
-def _send_document(url, body, headers):
+def _send_document(document_type, url, body):
     '''
     Отправляет документ на указанный адрес.
     Возвращает ответ сервера.
+    @param document_type: string
     @param url: string
     @param body: string
-    @param headers: dict
     @return: string
     '''
+    if document_type == 'album':
+        content_type = 'application/atom+xml; charset=utf-8; type=entry'
+    if document_type == 'photo':
+        content_type = 'image/jpeg'
     http_client = HttpClient()
-    return http_client.request(url, body, headers, 'POST')
+    return http_client.request(url, body, {'Content-Type': content_type}, 'POST')
 
 def _parse_resource_url(node, rel):
     '''
@@ -161,7 +165,7 @@ class Resource(object):
             resources.append(resource)
         return resources
     
-    def _get_resources(self, rel):
+    def _load_resources(self, rel):
         '''
         Загружает список ресурсов.
         @param rel: string
@@ -172,14 +176,14 @@ class Resource(object):
         root = fromstring(document)
         return self._parse_resources(root)
 
-    def get_resources(self, rel):
+    def _get_resources(self, rel):
         '''
         Возвращает список ресурсов, содержащихся в данном.
         @param rel: string
         @return: list
         '''
         if self._resources is None:
-            self._resources = self._get_resources(rel)
+            self._resources = self._load_resources(rel)
         return self._resources
 
 
@@ -188,14 +192,12 @@ class AlbumListResource(Resource):
     Ресурс списка альбомов.
     '''
     
-    def _get_new_album_headers(self):
+    def get_albums(self):
         '''
-        Возвращает заголовки для создания нового альбома.
-        @return dict
+        Возвращает список ресурсов альбомов.
+        @return: list
         '''
-        return {
-            'Content-Type': 'application/atom+xml; charset=utf-8; type=entry'
-        }
+        return self._get_resources('self')
     
     def _get_new_album_body(self, title):
         '''
@@ -218,9 +220,9 @@ class AlbumListResource(Resource):
         @param title: string
         '''
         url = _parse_resource_url(self._node, 'self')
-        headers = self._get_new_album_headers()
         body = self._get_new_album_body(title)
-        _send_document(url, body, headers)
+        _send_document('album', url, body)
+        self._resources = None
 
 
 class AlbumResource(Resource):
@@ -237,8 +239,8 @@ class AlbumResource(Resource):
         if title_node is None:
             logger.error('album title not found')
             return None
-        return title_node.text.encode('utf8')
-    
+        return title_node.text.encode('utf-8')
+
     def get_image_count(self):
         '''
         Возвращает количество фотографий в альбоме без их предварительной загрузки.
@@ -250,6 +252,23 @@ class AlbumResource(Resource):
             logger.error('image count not found')
             return None
         return int(image_count_node.attrib['value'])
+    
+    def get_photos(self):
+        '''
+        Возвращает список ресурсов фотографий.
+        @return: list
+        '''
+        return self._get_resources('photos')
+    
+    def add_photo(self, title, image_body):
+        '''
+        Добавляет фотографию в альбом.
+        @param title: string
+        @param image_body: string
+        '''
+        url = _parse_resource_url(self._node, 'photos')
+        _send_document('photo', url, image_body)
+        self._resources = None
 
 
 class PhotoResource(Resource):
@@ -266,7 +285,7 @@ class PhotoResource(Resource):
         if title_node is None:
             logger.error('photo title not found')
             return None
-        return title_node.text.encode('utf8')
+        return title_node.text.encode('utf-8')
 
     def get_size(self):
         '''

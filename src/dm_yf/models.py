@@ -4,10 +4,13 @@
 @author: Mic, 2012
 '''
 
+from dm_yf.log import getLogger
 from dm_yf.protocol import Service
 
 # Адрес сервисного документа:
 SERVICE_URL = 'http://api-fotki.yandex.ru/api/me/'
+
+logger = getLogger()
 
 class AlbumList(object):
     '''
@@ -50,11 +53,12 @@ class AlbumList(object):
         Загружает список альбомов.
         @return: list
         '''
+        logger.info('loading album list')
         albums = []
-        resources = self._resource.get_resources('self')
-        for resource in resources:
+        for resource in self._resource.get_albums():
             album = Album(resource)
             albums.append(album)
+        logger.info('album list loaded, %s albums found', len(albums))
         return albums
         
     def get_albums(self):
@@ -71,8 +75,10 @@ class AlbumList(object):
         Добавляет новый альбом.
         @param title: string
         '''
+        logger.info('adding album "%s"', title)
         self._resource.add_album(title)
         self._albums = None
+        logger.info('album "%s" added', title)
 
 
 class Album(object):
@@ -109,11 +115,12 @@ class Album(object):
         Загружает список фотографий.
         @return: list
         '''
+        logger.info('loading photo list for album %s', self)
         photos = []
-        resources = self._resource.get_resources('photos')
-        for resource in resources:
+        for resource in self._resource.get_photos():
             photo = Photo(resource)
             photos.append(photo)
+        logger.info('photo list loaded for album %s, %s photos found', self, len(photos))
         return photos
     
     def get_photos(self):
@@ -124,6 +131,18 @@ class Album(object):
         if self._photos is None:
             self._photos = self._get_photos()
         return self._photos
+    
+    def add_photo(self, title, path_to_image):
+        '''
+        Добавляет фотографию в альбом.
+        @param title: string
+        @param path_to_image: string
+        '''
+        logger.info('adding photo "%s" at %s', title, path_to_image)
+        image_body = open(path_to_image).read()
+        self._resource.add_photo(title, image_body)
+        self._photos = None
+        logger.info('photo "%s" added', title)
 
 
 class Photo(object):
@@ -138,7 +157,7 @@ class Photo(object):
         self._resource = resource
         
     def __str__(self):
-        return '<Photo "%s" (%sM)>'%(self.get_title().encode('utf8'), self.get_size(True))
+        return '<Photo "%s" (%sM)>'%(self.get_title(), self.get_size(True))
         
     def get_title(self):
         '''
@@ -162,4 +181,7 @@ class Photo(object):
         Возвращает тело фотографии.
         @return: string
         '''
-        return self._resource.get_content()
+        logger.info('loading photo %s', self)
+        content = self._resource.get_content()
+        logger.info('photo %s loaded', self)
+        return content

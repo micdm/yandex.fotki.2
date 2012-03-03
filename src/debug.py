@@ -13,5 +13,12 @@ def add_album():
     album_list = AlbumList.get()
     album_list.add_album()
 
+def add_photo():
+    album_list = AlbumList.get()
+    albums = album_list.get_albums()
+    album = albums[0]
+    album.add_photo('foobar', '/home/mic/downloads/4c6a1bd323ddd673d4ac085242fea2e3.jpg')
 
-add_album()
+
+#add_photo()
+print_photos()
