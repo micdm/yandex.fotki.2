@@ -304,7 +304,7 @@ class PhotoResource(Resource):
         Возвращает прикрепленное медиа-содержимое.
         @return: string
         '''
-        content_node = self._get_property('content')
+        content_node = self._get_node_by_name('content')
         if content_node is None:
             logger.error('attached media not found')
             return None

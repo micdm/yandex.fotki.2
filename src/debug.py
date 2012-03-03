@@ -1,6 +1,7 @@
 # encoding=utf8
 
 from dm_yf.models import AlbumList
+from dm_yf.synchronizer import Synchronizer
 
 def print_photos():
     album_list = AlbumList.get()
@@ -19,6 +20,8 @@ def add_photo():
     album = albums[0]
     album.add_photo('foobar', '/home/mic/downloads/4c6a1bd323ddd673d4ac085242fea2e3.jpg')
 
+def synchronize():
+    synchronizer = Synchronizer('/home/mic/photos2/')
+    synchronizer.run()
 
-#add_photo()
-print_photos()
+synchronize()
