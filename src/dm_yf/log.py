@@ -4,7 +4,7 @@
 @author: Mic, 2012
 '''
 
-from logging import getLogger, DEBUG, StreamHandler, Formatter
+from logging import getLogger, DEBUG, INFO, StreamHandler, Formatter
 
 formatter = Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
@@ -13,4 +13,11 @@ handler.setFormatter(formatter)
 
 logger = getLogger()
 logger.addHandler(handler)
-logger.setLevel(DEBUG)
+logger.setLevel(INFO)
+
+def set_logger_verbose():
+    '''
+    Заставляет логгер распечатывать отладочную информацию.
+    '''
+    logger.setLevel(DEBUG)
+    logger.debug('logger is now verbose')
