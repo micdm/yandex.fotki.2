@@ -104,7 +104,7 @@ class RemoteToLocalSynchronizer(object):
             return
         photos = album.get_photos()
         for i, photo in zip(range(len(photos)), photos):
-            logger.info('synchronizing photo %s/%s of album %s', i, len(photos), album)
+            logger.info('synchronizing photo %s/%s of album %s', i + 1, len(photos), album)
             self._sync_photo(album, photo)
         logger.debug('album %s synchronizing complete', album)
         

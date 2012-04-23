@@ -47,7 +47,10 @@ def _parse_resource_url(node, rel):
     @return: string
     '''
     qname = str(QName(ATOM_NS, 'link'))
-    return node.find('%s[@rel="%s"]'%(qname, rel)).attrib['href']
+    child = node.find('%s[@rel="%s"]'%(qname, rel))
+    if child is None:
+        return None
+    return child.attrib['href']
 
 def _parse_resource(node):
     '''
@@ -165,16 +168,29 @@ class Resource(object):
             resources.append(resource)
         return resources
     
+    def _load_resources_page(self, url):
+        '''
+        Парсит одну страницу. Возвращает элементы страницы и ссылку на следующую страницу.
+        @param url: string
+        @return: list, string
+        '''
+        document = _get_document(url)
+        root = fromstring(document)
+        next_page_url = _parse_resource_url(root, 'next')
+        return self._parse_resources(root), next_page_url
+    
     def _load_resources(self, rel):
         '''
         Загружает список ресурсов.
         @param rel: string
         @return: list
         '''
-        url = '%s/rpublished/'%_parse_resource_url(self._node, rel)
-        document = _get_document(url)
-        root = fromstring(document)
-        return self._parse_resources(root)
+        url = '%srpublished/'%_parse_resource_url(self._node, rel)
+        all_resources, next_page_url = self._load_resources_page(url)
+        while next_page_url is not None:
+            resources, next_page_url = self._load_resources_page(next_page_url)
+            all_resources.extend(resources)
+        return all_resources
 
     def _get_resources(self, rel):
         '''
