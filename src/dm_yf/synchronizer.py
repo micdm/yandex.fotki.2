@@ -4,6 +4,7 @@
 @author: Mic, 2012
 '''
 
+from hashlib import md5
 import os
 
 from dm_yf.log import getLogger
@@ -11,7 +12,7 @@ from dm_yf.models import AlbumList
 
 logger = getLogger()
 
-class LocalSynchronizer(object):
+class RemoteToLocalSynchronizer(object):
     '''
     Локальный синхронизатор.
     Создает копию удаленных данных в локальном хранилище.
@@ -36,6 +37,23 @@ class LocalSynchronizer(object):
             os.makedirs(path_to_album)
         return path_to_album
     
+    def _get_image_name(self, image_body):
+        '''
+        Возвращает имя файла-картинки.
+        @param image_body: string
+        @return: string
+        '''
+        return '%s.jpg'%md5(image_body).hexdigest()
+    
+    def _get_path_to_photo(self, album, image_name):
+        '''
+        Возвращает путь к фотографии.
+        @param album: Album 
+        @param image_name: string
+        @return: string
+        '''
+        return os.path.join(self._path_to_album_list, album.get_title(), image_name)
+    
     def _get_file_count(self, path_to_album):
         '''
         Возвращает количество файлов в директории альбома.
@@ -44,44 +62,34 @@ class LocalSynchronizer(object):
         '''
         return len(os.listdir(path_to_album))
     
-    def _get_path_to_photo(self, album, photo_index):
-        '''
-        Возвращает путь к фотографии.
-        @param album: Album 
-        @param photo_index: int
-        @return: string
-        '''
-        return os.path.join(self._path_to_album_list, album.get_title(), '%s.jpg'%photo_index)
-    
-    def _store_image(self, path_to_photo, photo):
+    def _store_image(self, path_to_photo, image_body):
         '''
         Сохраняет фотографию в директории альбома.
         @param path_to_photo: string
-        @param photo: Photo
+        @param image_body: string
         '''
-        image_body = photo.get_image()
         file_object = open(path_to_photo, 'w')
         file_object.write(image_body)
         file_object.close()
-    
-    def _sync_photo(self, album, photo_index, photo):
+        
+    def _sync_photo(self, album, photo):
         '''
         Синхронизирует фотографию.
         @param album: Album
-        @param photo_index: int
         @param photo: Photo
         '''
-        logger.info('synchronizing photo #%s of album %s', photo_index, album)
-        path_to_photo = self._get_path_to_photo(album, photo_index)
+        image_body = photo.get_image()
+        image_name = self._get_image_name(image_body)
+        logger.info('synchronizing photo %s of album %s', image_name, album)
+        path_to_photo = self._get_path_to_photo(album, image_name)
         if os.path.exists(path_to_photo):
             if os.path.getsize(path_to_photo) == photo.get_size():
-                logger.debug('photo #%s already exists, skipping', photo_index)
+                logger.debug('photo %s already exists, skipping', image_name)
                 return
-            else:
-                logger.warning('photo #%s already exists but has different size', photo_index)
-                return
-        self._store_image(path_to_photo, photo)
-        logger.debug('synchronizing photo #%s of album %s complete', photo_index, album)
+            logger.warning('photo %s already exists but has different size', image_name)
+            return
+        self._store_image(path_to_photo, image_body)
+        logger.debug('synchronizing photo %s of album %s complete', image_name, album)
     
     def _sync_album(self, album):
         '''
@@ -95,8 +103,8 @@ class LocalSynchronizer(object):
             logger.debug('looks like album is already synchronized, skipping')
             return
         photos = album.get_photos()
-        for photo_index, photo in zip(range(len(photos)), photos):
-            self._sync_photo(album, photo_index + 1, photo)
+        for photo in photos:
+            self._sync_photo(album, photo)
         logger.debug('album %s synchronizing complete', album)
         
     def run(self):
@@ -119,7 +127,7 @@ class Synchronizer(object):
         '''
         @param path_to_album_list: string
         '''
-        self._local_synchronizer = LocalSynchronizer(path_to_album_list)
+        self._local_synchronizer = RemoteToLocalSynchronizer(path_to_album_list)
         
     def run(self):
         '''
