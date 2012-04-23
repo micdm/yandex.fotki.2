@@ -5,7 +5,7 @@ HTTP-загрузчик.
 '''
 
 from time import sleep
-from urllib2 import Request, urlopen, HTTPError
+from urllib2 import Request, urlopen
 
 from dm_yf.log import logger
 from dm_yf.oauth import OAuth
@@ -69,6 +69,6 @@ class HttpClient(object):
         while True:
             try:
                 return self._request(url, data, headers, method)
-            except HTTPError as e:
+            except Exception as e:
                 logger.warning('error occured during request: %s, retrying in %s seconds', e, self.RETRY_INTERVAL)
                 sleep(self.RETRY_INTERVAL)
