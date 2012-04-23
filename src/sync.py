@@ -5,22 +5,28 @@
 @author: Mic, 2012
 '''
 
-import sys
+import argparse
 
 from dm_yf.log import set_logger_verbose
 from dm_yf.synchronizer import Synchronizer
+
+def _get_args():
+    '''
+    Возвращает разобранные аргументы командной строки.
+    '''
+    parser = argparse.ArgumentParser(description='Synchronize remote albums to local space.')
+    parser.add_argument('--verbose', required=False, action='store_true', dest='is_verbose', help='show verbose output')
+    parser.add_argument('path_to_output_dir', action='store', help='set output directory')
+    return parser.parse_args()
 
 def run():
     '''
     Запускает синхронизацию.
     '''
-    if len(sys.argv) == 1:
-        print 'Usage: %s [--verbose] <path_to_output_directory>'%sys.argv[0]
-        return
-    if '--verbose' in sys.argv:
+    args = _get_args()
+    if args.is_verbose:
         set_logger_verbose()
-    path_to_output_directory = sys.argv[1]
-    synchronizer = Synchronizer(path_to_output_directory)
+    synchronizer = Synchronizer(args.path_to_output_dir)
     synchronizer.run()
 
 run()

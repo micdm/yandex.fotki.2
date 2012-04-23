@@ -80,16 +80,16 @@ class RemoteToLocalSynchronizer(object):
         '''
         image_body = photo.get_image()
         image_name = self._get_image_name(image_body)
-        logger.info('synchronizing photo %s of album %s', image_name, album)
+        logger.info('synchronizing photo %s of album %s, filename is %s', photo, album, image_name)
         path_to_photo = self._get_path_to_photo(album, image_name)
         if os.path.exists(path_to_photo):
             if os.path.getsize(path_to_photo) == photo.get_size():
-                logger.debug('photo %s already exists, skipping', image_name)
+                logger.debug('photo %s already exists, skipping', photo)
                 return
-            logger.warning('photo %s already exists but has different size', image_name)
+            logger.warning('photo %s already exists but has different size', photo)
             return
         self._store_image(path_to_photo, image_body)
-        logger.debug('synchronizing photo %s of album %s complete', image_name, album)
+        logger.debug('synchronizing photo %s of album %s complete', photo, album)
     
     def _sync_album(self, album):
         '''
@@ -103,7 +103,8 @@ class RemoteToLocalSynchronizer(object):
             logger.debug('looks like album is already synchronized, skipping')
             return
         photos = album.get_photos()
-        for photo in photos:
+        for i, photo in zip(range(len(photos)), photos):
+            logger.info('synchronizing photo %s/%s of album %s', i, len(photos), album)
             self._sync_photo(album, photo)
         logger.debug('album %s synchronizing complete', album)
         
