@@ -292,6 +292,17 @@ class PhotoResource(Resource):
     Ресурс фотографии.
     '''
     
+    def get_id(self):
+        '''
+        Возвращает идентификатор фотографии.
+        @return: string
+        '''
+        id_node = self._get_node_by_name('id')
+        if id_node is None:
+            logger.error('photo id not found')
+            return None
+        return id_node.text
+    
     def get_title(self):
         '''
         Возвращает название фотографии.

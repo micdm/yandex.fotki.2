@@ -37,22 +37,15 @@ class RemoteToLocalSynchronizer(object):
             os.makedirs(path_to_album)
         return path_to_album
     
-    def _get_image_name(self, image_body):
-        '''
-        Возвращает имя файла-картинки.
-        @param image_body: string
-        @return: string
-        '''
-        return '%s.jpg'%md5(image_body).hexdigest()
-    
-    def _get_path_to_photo(self, album, image_name):
+    def _get_path_to_photo(self, album, photo):
         '''
         Возвращает путь к фотографии.
         @param album: Album 
-        @param image_name: string
+        @param photo: Photo
         @return: string
         '''
-        return os.path.join(self._path_to_album_list, album.get_title(), image_name)
+        filename = '%s.jpg'%md5(photo.get_id()).hexdigest()
+        return os.path.join(self._path_to_album_list, album.get_title(), filename)
     
     def _get_file_count(self, path_to_album):
         '''
@@ -62,14 +55,14 @@ class RemoteToLocalSynchronizer(object):
         '''
         return len(os.listdir(path_to_album))
     
-    def _store_image(self, path_to_photo, image_body):
+    def _store_image(self, path_to_photo, photo):
         '''
         Сохраняет фотографию в директории альбома.
         @param path_to_photo: string
-        @param image_body: string
+        @param photo: Photo
         '''
         file_object = open(path_to_photo, 'w')
-        file_object.write(image_body)
+        file_object.write(photo.get_image())
         file_object.close()
         
     def _sync_photo(self, album, photo):
@@ -78,17 +71,15 @@ class RemoteToLocalSynchronizer(object):
         @param album: Album
         @param photo: Photo
         '''
-        image_body = photo.get_image()
-        image_name = self._get_image_name(image_body)
-        logger.info('synchronizing photo %s of album %s, filename is %s', photo, album, image_name)
-        path_to_photo = self._get_path_to_photo(album, image_name)
+        logger.info('synchronizing photo %s of album %s', photo, album)
+        path_to_photo = self._get_path_to_photo(album, photo)
         if os.path.exists(path_to_photo):
             if os.path.getsize(path_to_photo) == photo.get_size():
-                logger.debug('photo %s already exists, skipping', photo)
+                logger.debug('photo %s already exists (%s), skipping', photo, path_to_photo)
                 return
-            logger.warning('photo %s already exists but has different size', photo)
+            logger.warning('photo %s already exists (%s) but has different size', photo, path_to_photo)
             return
-        self._store_image(path_to_photo, image_body)
+        self._store_image(path_to_photo, photo)
         logger.debug('synchronizing photo %s of album %s complete', photo, album)
     
     def _sync_album(self, album):

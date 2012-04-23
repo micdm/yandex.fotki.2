@@ -158,6 +158,13 @@ class Photo(object):
         
     def __str__(self):
         return '"%s (%sM)"'%(self.get_title(), self.get_size(True))
+    
+    def get_id(self):
+        '''
+        Возвращает идентификатор фотографии.
+        @return: string
+        '''
+        return self._resource.get_id()
         
     def get_title(self):
         '''
