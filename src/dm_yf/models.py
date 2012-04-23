@@ -94,7 +94,7 @@ class Album(object):
         self._resource = resource
         
     def __str__(self):
-        return '<Album "%s" (%s)>'%(self.get_title(), self.get_image_count())
+        return '"%s (%s)"'%(self.get_title(), self.get_image_count())
         
     def get_title(self):
         '''
@@ -157,7 +157,7 @@ class Photo(object):
         self._resource = resource
         
     def __str__(self):
-        return '<Photo "%s" (%sM)>'%(self.get_title(), self.get_size(True))
+        return '"%s (%sM)"'%(self.get_title(), self.get_size(True))
         
     def get_title(self):
         '''
