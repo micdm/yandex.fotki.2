@@ -53,7 +53,8 @@ class RemoteToLocalSynchronizer(object):
         @param path_to_album: string
         @return: int
         '''
-        return len(os.listdir(path_to_album))
+        _, _, filenames = os.walk(path_to_album).next()
+        return len(filenames)
     
     def _store_image(self, path_to_photo, photo):
         '''
@@ -103,11 +104,11 @@ class RemoteToLocalSynchronizer(object):
         '''
         Запускает синхронизацию.
         '''
-        logger.info('synchronizing local albums on %s', self._path_to_album_list)
+        logger.info('synchronizing remote to local on %s', self._path_to_album_list)
         album_list = AlbumList.get()
         for album in album_list.get_albums():
             self._sync_album(album)
-        logger.debug('local albums synchronizing complete on %s', self._path_to_album_list)
+        logger.debug('synchronizing remote to local complete on %s', self._path_to_album_list)
 
 
 class Synchronizer(object):
@@ -120,7 +121,7 @@ class Synchronizer(object):
         @param path_to_album_list: string
         '''
         self._local_synchronizer = RemoteToLocalSynchronizer(path_to_album_list)
-        
+
     def run(self):
         '''
         Запускает синхронизацию.
