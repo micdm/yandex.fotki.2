@@ -111,6 +111,51 @@ class RemoteToLocalSynchronizer(object):
         logger.debug('synchronizing remote to local complete on %s', self._path_to_album_list)
 
 
+class LocalToRemoteSynchronizer(object):
+    '''
+    Удаленный синхронизатор.
+    Выгружает локальные фотографии на сервер.
+    '''
+    
+    def __init__(self, path_to_album_list):
+        '''
+        @param path_to_album_list: string
+        '''
+        self._path_to_album_list = path_to_album_list
+        
+    def _get_local_albums(self):
+        '''
+        Возвращает список локальных альбомов.
+        @return: list
+        '''
+        return [dirname.replace(self._path_to_album_list, '') for dirname, _, _ in os.walk(self._path_to_album_list)]
+    
+    def _sync_album(self, album_list, title):
+        '''
+        Синхронизирует альбом.
+        @param album_list: AlbumList
+        @param title: string
+        '''
+        logger.info('synchronizing album "%s"', title)
+        #album_list.add_album(title)
+        logger.debug('album "%s" synchronizing complete', title)
+    
+    def run(self):
+        '''
+        Запускает синхронизацию.
+        '''
+        logger.info('synchronizing local to remote on %s', self._path_to_album_list)
+        local_albums = self._get_local_albums()
+        logger.debug('%s local albums found', len(local_albums))
+        album_list = AlbumList.get()
+        for title in local_albums:
+            if title in album_list:
+                logger.debug('remote album "%s" already exists, skipping', title)
+            else:
+                self._sync_album(album_list, title)
+        logger.debug('synchronizing local to remote complete on %s', self._path_to_album_list)
+
+
 class Synchronizer(object):
     '''
     Скомбинированный синхронизатор.
@@ -120,10 +165,24 @@ class Synchronizer(object):
         '''
         @param path_to_album_list: string
         '''
-        self._local_synchronizer = RemoteToLocalSynchronizer(path_to_album_list)
+        path_to_album_list = self._fix_path_to_album_list(path_to_album_list)
+        #self._local_synchronizer = RemoteToLocalSynchronizer(path_to_album_list)
+        self._remote_synchronizer = LocalToRemoteSynchronizer(path_to_album_list)
+        
+    def _fix_path_to_album_list(self, path_to_album_list):
+        '''
+        Подправляет и путь к альбомам, если у него на конце нет слеша.
+        @param path_to_album_list: string
+        @return: string
+        '''
+        if not path_to_album_list.endswith(os.sep):
+            logger.debug('no trailing slash found, adding one')
+            path_to_album_list += os.sep
+        return path_to_album_list
 
     def run(self):
         '''
         Запускает синхронизацию.
         '''
-        self._local_synchronizer.run()
+        #self._local_synchronizer.run()
+        self._remote_synchronizer.run()

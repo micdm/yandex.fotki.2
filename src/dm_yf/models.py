@@ -48,6 +48,15 @@ class AlbumList(object):
         self._albums = None
         self._resource = resource
         
+    def __contains__(self, title):
+        '''
+        @param title: string
+        '''
+        for album in self.get_albums():
+            if album.get_title() == title:
+                return album
+        return False
+        
     def _get_albums(self):
         '''
         Загружает список альбомов.
