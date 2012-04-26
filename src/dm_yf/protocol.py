@@ -232,13 +232,17 @@ class AlbumListResource(Resource):
 
     def add_album(self, title):
         '''
-        Добавляет новый альбом.
+        Добавляет новый альбом и возвращает его ресурс.
         @param title: string
+        @return: Resource
         '''
         url = _parse_resource_url(self._node, 'self')
         body = self._get_new_album_body(title)
-        _send_document('album', url, body)
-        self._resources = None
+        document = _send_document('album', url, body)
+        resource = _parse_resource(fromstring(document))
+        if self._resources is not None:
+            self._resources.append(resource)
+        return resource
 
 
 class AlbumResource(Resource):
@@ -278,13 +282,17 @@ class AlbumResource(Resource):
     
     def add_photo(self, title, image_body):
         '''
-        Добавляет фотографию в альбом.
+        Добавляет фотографию в альбом и возвращает ее ресурс.
         @param title: string
         @param image_body: string
+        @return: Resource
         '''
         url = _parse_resource_url(self._node, 'photos')
-        _send_document('photo', url, image_body)
-        self._resources = None
+        document = _send_document('photo', url, image_body)
+        resource = _parse_resource(fromstring(document))
+        if self._resources is not None:
+            self._resources.append(resource)
+        return resource
 
 
 class PhotoResource(Resource):

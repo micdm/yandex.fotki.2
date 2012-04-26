@@ -81,13 +81,17 @@ class AlbumList(object):
     
     def add_album(self, title):
         '''
-        Добавляет новый альбом.
+        Добавляет новый альбом и возвращает его.
         @param title: string
+        @return: Album
         '''
         logger.info('adding album "%s"', title)
-        self._resource.add_album(title)
-        self._albums = None
-        logger.info('album "%s" added', title)
+        resource = self._resource.add_album(title)
+        album = Album(resource)
+        if self._albums is not None:
+            self._albums.append(album)
+        logger.info('album %s added', album)
+        return album
 
 
 class Album(object):
@@ -143,15 +147,19 @@ class Album(object):
     
     def add_photo(self, title, path_to_image):
         '''
-        Добавляет фотографию в альбом.
+        Добавляет фотографию в альбом и возвращает ее.
         @param title: string
         @param path_to_image: string
+        @return: Photo
         '''
         logger.info('adding photo "%s" at %s', title, path_to_image)
         image_body = open(path_to_image).read()
-        self._resource.add_photo(title, image_body)
-        self._photos = None
-        logger.info('photo "%s" added', title)
+        resource = self._resource.add_photo(title, image_body)
+        photo = Photo(resource)
+        if self._photos is not None:
+            self._photos.append(photo)
+        logger.info('photo %s added', photo)
+        return photo
 
 
 class Photo(object):
