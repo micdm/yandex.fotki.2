@@ -5,21 +5,28 @@ HTTP-загрузчик.
 '''
 
 from time import sleep
-from urllib2 import Request, urlopen
+import urllib2
 
 from dm_yf.log import logger
 from dm_yf.oauth import OAuth
 
-class ExtendedRequest(Request):
+class Request(urllib2.Request):
     '''
-    Расширенный запрос. Умеет использовать методы, отличные от GET и POST.
+    HTTP-запрос.
+    Умеет использовать методы, отличные от GET и POST.
     '''
     
-    def __init__(self, *args, **kwargs):
-        self._method = kwargs['method']
-        del kwargs['method']
-        Request.__init__(self, *args, **kwargs)
-        
+    @classmethod
+    def get(cls, method, *args, **kwargs):
+        '''
+        Возвращает объект запроса.
+        @param method: string
+        @return: Request
+        '''
+        request = cls(*args, **kwargs)
+        request._method = method
+        return request
+    
     def get_method(self):
         return self._method
 
@@ -52,8 +59,8 @@ class HttpClient(object):
         '''
         logger.debug('loading url %s', url)
         headers = self._get_headers(headers)
-        request = ExtendedRequest(url, data, headers, method=method)
-        response = urlopen(request).read()
+        request = Request.get(method, url, data, headers)
+        response = urllib2.urlopen(request).read()
         logger.debug('%s bytes loaded from url %s', len(response), url)
         return response
     
