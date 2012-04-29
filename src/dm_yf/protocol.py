@@ -14,6 +14,9 @@ APP_NS = 'http://www.w3.org/2007/app'
 ATOM_NS = 'http://www.w3.org/2005/Atom'
 FOTKI_NS = 'yandex:fotki'
 
+DOCUMENT_TYPE_ENTRY = 'entry'
+DOCUMENT_TYPE_IMAGE = 'image'
+
 def _get_document(url):
     '''
     Загружает документ по указанному адресу.
@@ -23,21 +26,24 @@ def _get_document(url):
     http_client = HttpClient()
     return http_client.request(url)
 
-def _send_document(document_type, url, body):
+
+def _send_document(document_type, url, body, method='POST'):
     '''
     Отправляет документ на указанный адрес.
     Возвращает ответ сервера.
     @param document_type: string
     @param url: string
     @param body: string
+    @param method: string
     @return: string
     '''
-    if document_type == 'album':
+    if document_type == DOCUMENT_TYPE_ENTRY:
         content_type = 'application/atom+xml; charset=utf-8; type=entry'
-    if document_type == 'photo':
+    if document_type == DOCUMENT_TYPE_IMAGE:
         content_type = 'image/jpeg'
     http_client = HttpClient()
-    return http_client.request(url, body, {'Content-Type': content_type}, 'POST')
+    return http_client.request(url, body, {'Content-Type': content_type}, method)
+
 
 def _parse_resource_url(node, rel):
     '''
@@ -51,6 +57,7 @@ def _parse_resource_url(node, rel):
     if child is None:
         return None
     return child.attrib['href']
+
 
 def _parse_resource(node):
     '''
@@ -201,6 +208,13 @@ class Resource(object):
         if self._resources is None:
             self._resources = self._load_resources(rel)
         return self._resources
+    
+    def get_node(self):
+        '''
+        Возвращает элемент.
+        @return: Element
+        '''
+        return self._node
 
 
 class AlbumListResource(Resource):
@@ -238,7 +252,7 @@ class AlbumListResource(Resource):
         '''
         url = _parse_resource_url(self._node, 'self')
         body = self._get_new_album_body(title)
-        document = _send_document('album', url, body)
+        document = _send_document(DOCUMENT_TYPE_ENTRY, url, body)
         resource = _parse_resource(fromstring(document))
         if self._resources is not None:
             self._resources.append(resource)
@@ -261,7 +275,7 @@ class AlbumResource(Resource):
             return None
         return title_node.text.encode('utf-8')
 
-    def get_image_count(self):
+    def get_photo_count(self):
         '''
         Возвращает количество фотографий в альбоме без их предварительной загрузки.
         @return: int
@@ -269,7 +283,7 @@ class AlbumResource(Resource):
         qname = str(QName(FOTKI_NS, 'image-count'))
         image_count_node = self._node.find(qname)
         if image_count_node is None:
-            logger.error('image count not found')
+            logger.error('photo count not found')
             return None
         return int(image_count_node.attrib['value'])
     
@@ -279,7 +293,7 @@ class AlbumResource(Resource):
         @return: list
         '''
         return self._get_resources('photos')
-    
+
     def add_photo(self, title, image_body):
         '''
         Добавляет фотографию в альбом и возвращает ее ресурс.
@@ -288,10 +302,12 @@ class AlbumResource(Resource):
         @return: Resource
         '''
         url = _parse_resource_url(self._node, 'photos')
-        document = _send_document('photo', url, image_body)
+        document = _send_document(DOCUMENT_TYPE_IMAGE, url, image_body)
         resource = _parse_resource(fromstring(document))
         if self._resources is not None:
             self._resources.append(resource)
+        # TODO: грузить картинку и ставить заголовок в один запрос
+        resource.set_title(title)
         return resource
 
 
@@ -321,6 +337,17 @@ class PhotoResource(Resource):
             logger.error('photo title not found')
             return None
         return title_node.text.encode('utf-8')
+    
+    def set_title(self, title):
+        '''
+        Задает название фотографии.
+        @param title: string
+        '''
+        url = _parse_resource_url(self._node, 'edit')
+        title_node = self._get_node_by_name('title')
+        title_node.text = title
+        # TODO: убрать явное указание метода
+        _send_document(DOCUMENT_TYPE_ENTRY, url, tostring(self._node), 'PUT')
 
     def get_size(self):
         '''

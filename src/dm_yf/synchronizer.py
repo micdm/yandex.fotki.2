@@ -12,6 +12,31 @@ from dm_yf.models import AlbumList
 
 logger = getLogger()
 
+def get_photos(path):
+    '''
+    Возвращает фотографии в указанной директории.
+    @param path: string
+    @return: list
+    '''
+    _, _, filenames = os.walk(path).next()
+    photos = []
+    for filename in filenames:
+        _, extension = os.path.splitext(filename.lower())
+        if extension in ('.jpg', '.jpeg'):
+            path_to_photo = os.path.join(path, filename)
+            photos.append((filename, path_to_photo))
+    return photos
+
+
+def get_photo_count(path):
+    '''
+    Возвращает количество фотографий в указанной директории.
+    @param path: string
+    @return: int
+    '''
+    return len(get_photos(path))
+
+
 class RemoteToLocalSynchronizer(object):
     '''
     Локальный синхронизатор.
@@ -47,15 +72,6 @@ class RemoteToLocalSynchronizer(object):
         filename = '%s.jpg'%md5(photo.get_id()).hexdigest()
         return os.path.join(self._path_to_album_list, album.get_title(), filename)
     
-    def _get_file_count(self, path_to_album):
-        '''
-        Возвращает количество файлов в директории альбома.
-        @param path_to_album: string
-        @return: int
-        '''
-        _, _, filenames = os.walk(path_to_album).next()
-        return len(filenames)
-    
     def _sync_album(self, album):
         '''
         Синхронизирует альбом: создает директорию и загружает фотографии.
@@ -63,8 +79,7 @@ class RemoteToLocalSynchronizer(object):
         '''
         logger.info('synchronizing album %s', album)
         path_to_album = self._get_path_to_album(album)
-        file_count = self._get_file_count(path_to_album)
-        if file_count == album.get_image_count():
+        if get_photo_count(path_to_album) == album.get_image_count():
             logger.debug('looks like album is already synchronized, skipping')
             return
         photos = album.get_photos()
@@ -134,34 +149,37 @@ class LocalToRemoteSynchronizer(object):
             albums.append((title, dirname))
         return albums
     
-    def _get_album_photos(self, path_to_album):
+    def _is_album_synced(self, title, path_to_album):
         '''
-        Возвращает список фотографий в локальном альбоме (название и путь).
+        Возвращает, синхронизирован ли альбом.
+        @param title: string
         @param path_to_album: string
-        @return: list
+        @return: bool
         '''
-        _, _, filenames = os.walk(path_to_album).next()
-        photos = []
-        for filename in filenames:
-            _, extension = os.path.splitext(filename.lower())
-            if extension in ('.jpg', '.jpeg'):
-                path_to_photo = os.path.join(path_to_album, filename)
-                photos.append((filename, path_to_photo))
-        return photos
+        album_list = AlbumList.get()
+        if title not in album_list:
+            return False
+        album = album_list.get_album(title)
+        if get_photo_count(path_to_album) != album.get_photo_count():
+            return False
+        return True
     
-    def _sync_album(self, album_list, album_title, path_to_album):
+    def _sync_album(self, album_title, path_to_album):
         '''
         Синхронизирует альбом.
-        @param album_list: AlbumList
         @param album_title: string
         @param path_to_album: string
         '''
         logger.info('synchronizing album "%s"', album_title)
-        photos = self._get_album_photos(path_to_album)
+        if self._is_album_synced(album_title, path_to_album):
+            logger.debug('album "%s" alrady synced, skipping', album_title)
+            return
+        photos = get_photos(path_to_album)
         if not photos:
             logger.debug('album "%s" contains no photos, skipping', album_title)
             return
         logger.debug('album "%s" contains %s photos', album_title, len(photos))
+        album_list = AlbumList.get()
         album = album_list.add_album(album_title)
         for i, (photo_title, path_to_photo) in zip(range(len(photos)), photos):
             logger.info('synchronizing photo %s/%s of album %s', i + 1, len(photos), album)
@@ -176,7 +194,15 @@ class LocalToRemoteSynchronizer(object):
         @param path_to_photo: string
         '''
         logger.info('synchronizing photo "%s" of album %s', photo_title, album)
+#        if photo_title in album:
+#            photo = album.get_photo(photo_title)
+#            if os.path.getsize(path_to_photo) == photo.get_size():
+#                logger.debug('photo "%s" already synced, skipping', photo_title)
+#                return
+#            logger.warning('photo "%s" already exists but has different size', photo_title)
+#            return
         album.add_photo(photo_title, path_to_photo)
+        raise Exception()
         logger.debug('synchronizing photo "%s" of album %s complete', photo_title, album)
     
     def run(self):
@@ -186,13 +212,8 @@ class LocalToRemoteSynchronizer(object):
         logger.info('synchronizing local to remote on %s', self._path_to_album_list)
         local_albums = self._get_local_albums()
         logger.debug('%s local albums found', len(local_albums))
-        album_list = AlbumList.get()
         for title, path_to_album in local_albums:
-            if title in album_list:
-                # TODO: проверить, совпадает ли количество файлов
-                logger.debug('remote album "%s" already exists, skipping', title)
-            else:
-                self._sync_album(album_list, title, path_to_album)
+            self._sync_album(title, path_to_album)
         logger.debug('synchronizing local to remote complete on %s', self._path_to_album_list)
 
 

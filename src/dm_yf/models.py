@@ -52,10 +52,7 @@ class AlbumList(object):
         '''
         @param title: string
         '''
-        for album in self.get_albums():
-            if album.get_title() == title:
-                return album
-        return False
+        return self.get_album(title) is not None
         
     def _get_albums(self):
         '''
@@ -78,6 +75,17 @@ class AlbumList(object):
         if self._albums is None:
             self._albums = self._get_albums()
         return self._albums
+    
+    def get_album(self, title):
+        '''
+        Возвращает альбом по названию.
+        @param title: string
+        @return: Album
+        '''
+        for album in self.get_albums():
+            if album.get_title() == title:
+                return album
+        return None
     
     def add_album(self, title):
         '''
@@ -107,7 +115,7 @@ class Album(object):
         self._resource = resource
         
     def __str__(self):
-        return '"%s (%s)"'%(self.get_title(), self.get_image_count())
+        return '"%s (%s)"'%(self.get_title(), self.get_photo_count())
         
     def get_title(self):
         '''
@@ -116,12 +124,12 @@ class Album(object):
         '''
         return self._resource.get_title()
     
-    def get_image_count(self):
+    def get_photo_count(self):
         '''
         Возвращает количество фотографий в альбоме.
         @return: int
         '''
-        return self._resource.get_image_count()
+        return self._resource.get_photo_count()
     
     def _get_photos(self):
         '''
