@@ -69,7 +69,11 @@ class RemoteToLocalSynchronizer(object):
         @param photo: Photo
         @return: string
         '''
-        filename = '%s.jpg'%md5(photo.get_id()).hexdigest()
+        title = photo.get_title()
+        if title is None:
+            filename = '%s.jpg'%md5(photo.get_id()).hexdigest()
+        else:
+            filename = title
         return os.path.join(self._path_to_album_list, album.get_title(), filename)
     
     def _sync_album(self, album):
@@ -77,14 +81,14 @@ class RemoteToLocalSynchronizer(object):
         Синхронизирует альбом: создает директорию и загружает фотографии.
         @param album: Album
         '''
-        logger.info('synchronizing album %s', album)
+        logger.info('synchronizing album "%s"', album)
         path_to_album = self._get_path_to_album(album)
         if get_photo_count(path_to_album) == album.get_image_count():
-            logger.debug('looks like album is already synchronized, skipping')
+            logger.debug('looks like album "%s" is already synchronized, skipping', album)
             return
         photos = album.get_photos()
         for i, photo in zip(range(len(photos)), photos):
-            logger.info('synchronizing photo %s/%s of album %s', i + 1, len(photos), album)
+            logger.debug('synchronizing photo %s/%s of album "%s"', i + 1, len(photos), album)
             self._sync_photo(album, photo)
         logger.debug('album %s synchronizing complete', album)
 
@@ -104,16 +108,16 @@ class RemoteToLocalSynchronizer(object):
         @param album: Album
         @param photo: Photo
         '''
-        logger.info('synchronizing photo %s of album %s', photo, album)
+        logger.info('synchronizing photo "%s" of album "%s"', photo, album)
         path_to_photo = self._get_path_to_photo(album, photo)
         if os.path.exists(path_to_photo):
             if os.path.getsize(path_to_photo) == photo.get_size():
-                logger.debug('photo %s already exists (%s), skipping', photo, path_to_photo)
+                logger.debug('photo "%s" already exists (%s), skipping', photo, path_to_photo)
                 return
-            logger.warning('photo %s already exists (%s) but has different size', photo, path_to_photo)
+            logger.warning('photo "%s" already exists (%s) but has different size', photo, path_to_photo)
             return
         self._store_image(path_to_photo, photo)
-        logger.debug('synchronizing photo %s of album %s complete', photo, album)
+        logger.debug('synchronizing photo "%s" of album "%s" complete', photo, album)
         
     def run(self):
         '''
@@ -182,9 +186,9 @@ class LocalToRemoteSynchronizer(object):
         album_list = AlbumList.get()
         album = album_list.add_album(album_title)
         for i, (photo_title, path_to_photo) in zip(range(len(photos)), photos):
-            logger.info('synchronizing photo %s/%s of album %s', i + 1, len(photos), album)
+            logger.debug('synchronizing photo %s/%s of album "%s"', i + 1, len(photos), album)
             self._sync_photo(album, photo_title, path_to_photo)
-        logger.debug('album "%s" synchronizing complete', album_title)
+        logger.debug('album "%s" synchronizing complete', album)
         
     def _sync_photo(self, album, photo_title, path_to_photo):
         '''
@@ -193,17 +197,16 @@ class LocalToRemoteSynchronizer(object):
         @param photo_title: string
         @param path_to_photo: string
         '''
-        logger.info('synchronizing photo "%s" of album %s', photo_title, album)
-#        if photo_title in album:
-#            photo = album.get_photo(photo_title)
-#            if os.path.getsize(path_to_photo) == photo.get_size():
-#                logger.debug('photo "%s" already synced, skipping', photo_title)
-#                return
-#            logger.warning('photo "%s" already exists but has different size', photo_title)
-#            return
+        logger.info('synchronizing photo "%s" of album "%s"', photo_title, album)
+        if photo_title in album:
+            photo = album.get_photo(photo_title)
+            if os.path.getsize(path_to_photo) == photo.get_size():
+                logger.debug('photo "%s" already synced, skipping', photo_title)
+                return
+            logger.warning('photo "%s" already exists but has different size', photo_title)
+            return
         album.add_photo(photo_title, path_to_photo)
-        raise Exception()
-        logger.debug('synchronizing photo "%s" of album %s complete', photo_title, album)
+        logger.debug('synchronizing photo "%s" of album "%s" complete', photo_title, album)
     
     def run(self):
         '''
@@ -227,7 +230,7 @@ class Synchronizer(object):
         @param path_to_album_list: string
         '''
         path_to_album_list = self._fix_path_to_album_list(path_to_album_list)
-        #self._local_synchronizer = RemoteToLocalSynchronizer(path_to_album_list)
+        self._local_synchronizer = RemoteToLocalSynchronizer(path_to_album_list)
         self._remote_synchronizer = LocalToRemoteSynchronizer(path_to_album_list)
         
     def _fix_path_to_album_list(self, path_to_album_list):
@@ -245,5 +248,5 @@ class Synchronizer(object):
         '''
         Запускает синхронизацию.
         '''
-        #self._local_synchronizer.run()
+        self._local_synchronizer.run()
         self._remote_synchronizer.run()

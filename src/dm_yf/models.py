@@ -54,10 +54,9 @@ class AlbumList(object):
         '''
         return self.get_album(title) is not None
         
-    def _get_albums(self):
+    def _load_albums(self):
         '''
         Загружает список альбомов.
-        @return: list
         '''
         logger.info('loading album list')
         albums = []
@@ -65,7 +64,7 @@ class AlbumList(object):
             album = Album(resource)
             albums.append(album)
         logger.info('album list loaded, %s albums found', len(albums))
-        return albums
+        self._albums = albums
         
     def get_albums(self):
         '''
@@ -73,7 +72,7 @@ class AlbumList(object):
         @return: string
         '''
         if self._albums is None:
-            self._albums = self._get_albums()
+            self._load_albums()
         return self._albums
     
     def get_album(self, title):
@@ -96,9 +95,10 @@ class AlbumList(object):
         logger.info('adding album "%s"', title)
         resource = self._resource.add_album(title)
         album = Album(resource)
-        if self._albums is not None:
-            self._albums.append(album)
-        logger.info('album %s added', album)
+        if self._albums is None:
+            self._load_albums()
+        self._albums.append(album)
+        logger.info('album "%s" added', album)
         return album
 
 
@@ -115,7 +115,13 @@ class Album(object):
         self._resource = resource
         
     def __str__(self):
-        return '"%s (%s)"'%(self.get_title(), self.get_photo_count())
+        return '%s (%s)'%(self.get_title(), self.get_photo_count())
+    
+    def __contains__(self, title):
+        '''
+        @param title: string
+        '''
+        return self.get_photo(title) is not None
         
     def get_title(self):
         '''
@@ -129,20 +135,21 @@ class Album(object):
         Возвращает количество фотографий в альбоме.
         @return: int
         '''
-        return self._resource.get_photo_count()
+        if self._photos is None:
+            return self._resource.get_photo_count()
+        return len(self._photos)
     
-    def _get_photos(self):
+    def _load_photos(self):
         '''
         Загружает список фотографий.
-        @return: list
         '''
-        logger.info('loading photo list for album %s', self)
+        logger.info('loading photo list for album "%s"', self)
         photos = []
         for resource in self._resource.get_photos():
             photo = Photo(resource)
             photos.append(photo)
-        logger.info('photo list loaded for album %s, %s photos found', self, len(photos))
-        return photos
+        logger.info('photo list loaded for album "%s", %s photos found', self, len(photos))
+        self._photos = photos
     
     def get_photos(self):
         '''
@@ -150,8 +157,19 @@ class Album(object):
         @return: list
         '''
         if self._photos is None:
-            self._photos = self._get_photos()
+            self._load_photos()
         return self._photos
+    
+    def get_photo(self, title):
+        '''
+        Возвращает фотографию по названию.
+        @param title: string
+        @return: Photo
+        '''
+        for photo in self.get_photos():
+            if photo.get_title() == title:
+                return photo
+        return None
     
     def add_photo(self, title, path_to_image):
         '''
@@ -164,9 +182,10 @@ class Album(object):
         image_body = open(path_to_image).read()
         resource = self._resource.add_photo(title, image_body)
         photo = Photo(resource)
-        if self._photos is not None:
-            self._photos.append(photo)
-        logger.info('photo %s added', photo)
+        if self._photos is None:
+            self._load_photos()
+        self._photos.append(photo)
+        logger.info('photo "%s" added', photo)
         return photo
 
 
@@ -175,6 +194,9 @@ class Photo(object):
     Фотография.
     '''
     
+    # Название фотографии по умолчанию, которое ставит сам сервис:
+    DEFAULT_TITLE = 'Фотка'
+    
     def __init__(self, resource):
         '''
         @param resource: Resource
@@ -182,7 +204,7 @@ class Photo(object):
         self._resource = resource
         
     def __str__(self):
-        return '"%s (%sM)"'%(self.get_title(), self.get_size(True))
+        return '%s (%sM)'%(self.get_title(), self.get_size(True))
     
     def get_id(self):
         '''
@@ -196,7 +218,10 @@ class Photo(object):
         Возвращает название фотографии.
         @return: string
         '''
-        return self._resource.get_title()
+        title = self._resource.get_title()
+        if title == self.DEFAULT_TITLE:
+            return None
+        return title
     
     def get_size(self, as_megabytes=False):
         '''
@@ -213,7 +238,7 @@ class Photo(object):
         Возвращает тело фотографии.
         @return: string
         '''
-        logger.info('loading photo %s', self)
+        logger.info('loading photo "%s"', self)
         content = self._resource.get_content()
-        logger.info('photo %s loaded', self)
+        logger.info('photo "%s" loaded', self)
         return content
