@@ -4,20 +4,30 @@
 @author: Mic, 2012
 '''
 
-from logging import getLogger, DEBUG, INFO, StreamHandler, Formatter
+import logging
 
-formatter = Formatter('%(asctime)s [%(levelname)s] %(message)s')
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
-handler = StreamHandler()
+handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 
-logger = getLogger()
+logger = logging.getLogger()
 logger.addHandler(handler)
-logger.setLevel(INFO)
+logger.setLevel(logging.INFO)
 
 def set_logger_verbose():
     '''
     Заставляет логгер распечатывать отладочную информацию.
     '''
-    logger.setLevel(DEBUG)
+    logger.setLevel(logging.DEBUG)
     logger.debug('logger is now verbose')
+
+
+def set_log_file(path):
+    '''
+    Заставляет логгер писать сообщения в файл.
+    @param path: string
+    '''
+    handler = logging.FileHandler(path)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
