@@ -90,8 +90,10 @@ class RemoteToLocalSynchronizer(object):
         @param path_to_photo: string
         @param photo: Photo
         '''
+        image = photo.get_image()
+        photo.cleanup_image()
         file_object = open(path_to_photo, 'w')
-        file_object.write(photo.get_image())
+        file_object.write(image)
         file_object.close()
         
     def _sync_photo(self, album, photo):

@@ -201,6 +201,7 @@ class Photo(object):
         '''
         @param resource: Resource
         '''
+        self._image = None
         self._resource = resource
         
     def __str__(self):
@@ -233,13 +234,29 @@ class Photo(object):
         if as_megabytes:
             return round(float(size) / 2**20, 2)
         return size
+    
+    def _load_image(self):
+        '''
+        Загружает тело фотографии.
+        '''
+        logger.info('loading photo "%s"', self)
+        self._image = self._resource.get_content()
+        logger.info('photo "%s" loaded', self)
         
     def get_image(self):
         '''
         Возвращает тело фотографии.
         @return: string
         '''
-        logger.info('loading photo "%s"', self)
-        content = self._resource.get_content()
-        logger.info('photo "%s" loaded', self)
-        return content
+        if self._image is None:
+            self._load_image()
+        return self._image
+    
+    def cleanup_image(self):
+        '''
+        Очищает кэшированное тело фотографии.
+        Необходимо обязательно вызывать, если тело больше не нужно.
+        '''
+        logger.debug('cleanuping image for photo "%s"', self)
+        self._image = None
+        

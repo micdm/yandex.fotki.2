@@ -22,6 +22,24 @@ def _prepare_path(path):
     return path.replace(os.path.sep, '', 1)
 
 
+def _parse_path(path):
+    '''
+    Разбирает путь и возвращает альбом и фотографию, которые находятся по этому пути.
+    @param path: string
+    @return: Album, Photo
+    '''
+    album_list = AlbumList.get()
+    album = album_list.get_album(path)
+    if album:
+        return album, None
+    album_title, photo_title = os.path.split(path)
+    album = album_list.get_album(album_title)
+    if album is None:
+        return None, None
+    photo = album.get_photo(photo_title)
+    return album, photo
+
+
 class FotkiFilesystem(fuse.Fuse):
     '''
     Реализация виртуальной файловой системы средствами FUSE.
@@ -40,9 +58,8 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Возвращает информацию для альбома.
         '''
-        album_list = AlbumList.get()
-        album = album_list.get_album(path)
-        if not album:
+        album, _ = _parse_path(path)
+        if album is None:
             return None
         logger.debug('%s is album', path)
         info = fuse.Stat()
@@ -54,13 +71,8 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Возвращает информацию для фотографии.
         '''
-        album_title, photo_title = os.path.split(path)
-        album_list = AlbumList.get()
-        album = album_list.get_album(album_title)
-        if not album:
-            return None
-        photo = album.get_photo(photo_title)
-        if not photo:
+        _, photo = _parse_path(path)
+        if photo is None:
             return None
         logger.debug('%s is photo', path)
         info = fuse.Stat()
@@ -78,10 +90,10 @@ class FotkiFilesystem(fuse.Fuse):
         path = _prepare_path(path)
         if not path:
             return self._getattr_for_root()
-        info = self._getattr_for_album(path)
+        info = self._getattr_for_photo(path)
         if info:
             return info
-        info = self._getattr_for_photo(path)
+        info = self._getattr_for_album(path)
         if info:
             return info
         return -errno.ENOENT
@@ -102,6 +114,34 @@ class FotkiFilesystem(fuse.Fuse):
             album = album_list.get_album(path)
             for photo in album.get_photos():
                 yield fuse.Direntry(photo.get_title())
+                
+    def open(self, path, flags):
+        '''
+        Вызывается перед попыткой открыть файл.
+        '''
+        logger.debug('opening %s with flags %s', path, flags)
+        access = os.O_RDONLY | os.O_WRONLY | os.O_RDWR
+        if (flags & access) != os.O_RDONLY:
+            return -errno.EACCES
+        path = _prepare_path(path)
+        _, photo = _parse_path(path)
+        if photo is None:
+            return -errno.ENOENT
+    
+    def read(self, path, size, offset):
+        '''
+        Возвращает порцию данных из файла.
+        '''
+        logger.debug('reading %s bytes with offset %s from %s', size, offset, path)
+        path = _prepare_path(path)
+        _, photo = _parse_path(path)
+        if photo is None:
+            return -errno.ENOENT
+        image = photo.get_image()
+        chunk = image[offset:offset + size]
+        if offset + size >= len(image):
+            photo.cleanup_image()
+        return chunk
 
 
 def start():
