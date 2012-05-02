@@ -220,7 +220,6 @@ class Photo(object):
         @return: string
         '''
         title = self._resource.get_title()
-        logger.warning('TITLE IS %s, TYPE IS %s', title, type(title))
         if title == self.DEFAULT_TITLE:
             return '%s.jpg'%md5(self.get_id()).hexdigest()
         return title
