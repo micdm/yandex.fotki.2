@@ -4,13 +4,10 @@
 @author: Mic, 2012
 '''
 
-from hashlib import md5
 import os
 
-from dm_yf.log import getLogger
+from dm_yf.log import logger
 from dm_yf.models import AlbumList
-
-logger = getLogger()
 
 def get_photos(path):
     '''
@@ -69,12 +66,7 @@ class RemoteToLocalSynchronizer(object):
         @param photo: Photo
         @return: string
         '''
-        title = photo.get_title()
-        if title is None:
-            filename = '%s.jpg'%md5(photo.get_id()).hexdigest()
-        else:
-            filename = title
-        return os.path.join(self._path_to_album_list, album.get_title(), filename)
+        return os.path.join(self._path_to_album_list, album.get_title(), photo.get_title())
     
     def _sync_album(self, album):
         '''

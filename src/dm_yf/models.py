@@ -4,13 +4,13 @@
 @author: Mic, 2012
 '''
 
-from dm_yf.log import getLogger
+from hashlib import md5
+
+from dm_yf.log import logger
 from dm_yf.protocol import Service
 
 # Адрес сервисного документа:
 SERVICE_URL = 'http://api-fotki.yandex.ru/api/me/'
-
-logger = getLogger()
 
 class AlbumList(object):
     '''
@@ -216,11 +216,13 @@ class Photo(object):
     def get_title(self):
         '''
         Возвращает название фотографии.
+        Если название не задано, генерирует название из идентификатора фотографии.
         @return: string
         '''
         title = self._resource.get_title()
+        logger.warning('TITLE IS %s, TYPE IS %s', title, type(title))
         if title == self.DEFAULT_TITLE:
-            return None
+            return '%s.jpg'%md5(self.get_id()).hexdigest()
         return title
     
     def get_size(self, as_megabytes=False):
