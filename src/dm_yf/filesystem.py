@@ -4,6 +4,8 @@
 @author: Mic, 2012
 '''
 
+from datetime import datetime
+import errno
 import os.path
 import stat
 
@@ -11,7 +13,7 @@ import fuse
 
 from dm_yf.log import logger, set_log_file, set_logger_verbose
 from dm_yf.models import AlbumList
-import errno
+from dm_yf.utils import to_timestamp
 
 def _prepare_path(path):
     '''
@@ -65,6 +67,12 @@ class FotkiFilesystem(fuse.Fuse):
         info = fuse.Stat()
         info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         info.st_nlink = 3
+        info.st_uid = os.getuid()
+        info.st_gid = os.getgid()
+        info.st_size = album.photo_count
+        info.st_atime = to_timestamp(datetime.utcnow())
+        info.st_mtime = to_timestamp(album.updated)
+        info.st_ctime = to_timestamp(album.published) 
         return info
     
     def _getattr_for_photo(self, path):
@@ -78,14 +86,18 @@ class FotkiFilesystem(fuse.Fuse):
         info = fuse.Stat()
         info.st_mode = stat.S_IFREG | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         info.st_nlink = 1
+        info.st_uid = os.getuid()
+        info.st_gid = os.getgid()
         info.st_size = photo.size
+        info.st_atime = to_timestamp(datetime.utcnow())
+        info.st_mtime = to_timestamp(photo.updated)
+        info.st_ctime = to_timestamp(photo.published)
         return info
 
     def getattr(self, path): #@ReservedAssignment
         '''
         Возвращает информацию о файле.
         '''
-        # TODO: проставить метки времени
         logger.debug('getting information about %s', path)
         path = _prepare_path(path)
         if not path:

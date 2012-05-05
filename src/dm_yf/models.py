@@ -110,6 +110,22 @@ class Album(object):
         return self._resource.title
     
     @property
+    def published(self):
+        '''
+        Возвращает дату публикации альбома.
+        @return: datetime
+        '''
+        return self._resource.published
+    
+    @property
+    def updated(self):
+        '''
+        Возвращает дату изменения альбома.
+        @return: datetime
+        '''
+        return self._resource.updated
+    
+    @property
     def photo_count(self):
         '''
         Возвращает количество фотографий в альбоме.
@@ -187,6 +203,22 @@ class Photo(object):
         if title == self.DEFAULT_TITLE:
             return '%s.jpg'%md5(self._resource.remote_id).hexdigest()
         return title
+    
+    @property
+    def published(self):
+        '''
+        Возвращает дату публикации фотографии.
+        @return: datetime
+        '''
+        return self._resource.published
+    
+    @property
+    def updated(self):
+        '''
+        Возвращает дату изменения фотографии.
+        @return: datetime
+        '''
+        return self._resource.updated
     
     @property
     def size(self):

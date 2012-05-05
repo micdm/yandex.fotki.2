@@ -4,6 +4,7 @@
 @author: Mic, 2012
 '''
 
+from datetime import datetime
 from xml.etree.ElementTree import fromstring, tostring, Element, TreeBuilder, QName
 
 from dm_yf.http import HttpClient
@@ -80,6 +81,15 @@ def _parse_resource(node):
         return PhotoResource(node)
     logger.error('unknown resource type "%s"', resource_type)
     return None
+
+
+def _parse_datetime(datetime_string):
+    '''
+    Разбирает дату и время из строки.
+    @param datetime_string: string
+    @return: datetime
+    '''
+    return datetime.strptime(datetime_string, '%Y-%m-%dT%H:%M:%SZ')
 
 
 class Service(object):
@@ -268,6 +278,24 @@ class AlbumResource(Resource):
             logger.error('album title not found')
             return None
         return title_node.text.encode('utf-8')
+    
+    @property
+    def published(self):
+        '''
+        Возвращает дату публикации альбома.
+        @return: datetime
+        '''
+        node = self._get_node_by_name('published')
+        return _parse_datetime(node.text)
+    
+    @property
+    def updated(self):
+        '''
+        Возвращает дату редактирования альбома.
+        @return: datetime
+        '''
+        node = self._get_node_by_name('updated')
+        return _parse_datetime(node.text)
 
     @property
     def photo_count(self):
@@ -347,6 +375,24 @@ class PhotoResource(Resource):
         title_node.text = title
         # TODO: убрать явное указание метода
         _send_document(DOCUMENT_TYPE_ENTRY, url, tostring(self._node), 'PUT')
+        
+    @property
+    def published(self):
+        '''
+        Возвращает дату публикации фотографии.
+        @return: datetime
+        '''
+        node = self._get_node_by_name('published')
+        return _parse_datetime(node.text)
+    
+    @property
+    def updated(self):
+        '''
+        Возвращает дату редактирования фотографии.
+        @return: datetime
+        '''
+        node = self._get_node_by_name('updated')
+        return _parse_datetime(node.text)
 
     @property
     def size(self):
