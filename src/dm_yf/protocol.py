@@ -190,14 +190,13 @@ class Resource(object):
         '''
         Загружает список ресурсов.
         @param rel: string
-        @return: list
         '''
         url = '%srpublished/'%_parse_resource_url(self._node, rel)
         all_resources, next_page_url = self._load_resources_page(url)
         while next_page_url is not None:
             resources, next_page_url = self._load_resources_page(next_page_url)
             all_resources.extend(resources)
-        return all_resources
+        self._resources = all_resources
 
     def _get_resources(self, rel):
         '''
@@ -206,15 +205,8 @@ class Resource(object):
         @return: list
         '''
         if self._resources is None:
-            self._resources = self._load_resources(rel)
+            self._load_resources(rel)
         return self._resources
-    
-    def get_node(self):
-        '''
-        Возвращает элемент.
-        @return: Element
-        '''
-        return self._node
 
 
 class AlbumListResource(Resource):
@@ -222,7 +214,8 @@ class AlbumListResource(Resource):
     Ресурс списка альбомов.
     '''
     
-    def get_albums(self):
+    @property
+    def albums(self):
         '''
         Возвращает список ресурсов альбомов.
         @return: list
@@ -244,7 +237,7 @@ class AlbumListResource(Resource):
         node = builder.close()
         return tostring(node)
 
-    def add_album(self, title):
+    def add(self, title):
         '''
         Добавляет новый альбом и возвращает его ресурс.
         @param title: string
@@ -264,7 +257,8 @@ class AlbumResource(Resource):
     Ресурс альбома.
     '''
     
-    def get_title(self):
+    @property
+    def title(self):
         '''
         Возвращает название альбома.
         @return: string
@@ -275,7 +269,8 @@ class AlbumResource(Resource):
             return None
         return title_node.text.encode('utf-8')
 
-    def get_photo_count(self):
+    @property
+    def photo_count(self):
         '''
         Возвращает количество фотографий в альбоме без их предварительной загрузки.
         @return: int
@@ -287,14 +282,15 @@ class AlbumResource(Resource):
             return None
         return int(image_count_node.attrib['value'])
     
-    def get_photos(self):
+    @property
+    def photos(self):
         '''
         Возвращает список ресурсов фотографий.
         @return: list
         '''
         return self._get_resources('photos')
 
-    def add_photo(self, title, image_body):
+    def add(self, title, image_body):
         '''
         Добавляет фотографию в альбом и возвращает ее ресурс.
         @param title: string
@@ -307,7 +303,7 @@ class AlbumResource(Resource):
         if self._resources is not None:
             self._resources.append(resource)
         # TODO: грузить картинку и ставить заголовок в один запрос
-        resource.set_title(title)
+        resource.title = title
         return resource
 
 
@@ -316,7 +312,8 @@ class PhotoResource(Resource):
     Ресурс фотографии.
     '''
     
-    def get_id(self):
+    @property
+    def remote_id(self):
         '''
         Возвращает идентификатор фотографии.
         @return: string
@@ -327,7 +324,8 @@ class PhotoResource(Resource):
             return None
         return id_node.text
     
-    def get_title(self):
+    @property
+    def title(self):
         '''
         Возвращает название фотографии.
         @return: string
@@ -338,7 +336,8 @@ class PhotoResource(Resource):
             return None
         return title_node.text.encode('utf-8')
     
-    def set_title(self, title):
+    @title.setter
+    def title(self, title):
         '''
         Задает название фотографии.
         @param title: string
@@ -349,7 +348,8 @@ class PhotoResource(Resource):
         # TODO: убрать явное указание метода
         _send_document(DOCUMENT_TYPE_ENTRY, url, tostring(self._node), 'PUT')
 
-    def get_size(self):
+    @property
+    def size(self):
         '''
         Возвращает размер фотографии в байтах.
         @return: int
@@ -361,7 +361,8 @@ class PhotoResource(Resource):
             return None
         return int(img_node.attrib['bytesize'])
 
-    def get_content(self):
+    @property
+    def content(self):
         '''
         Возвращает прикрепленное медиа-содержимое.
         @return: string

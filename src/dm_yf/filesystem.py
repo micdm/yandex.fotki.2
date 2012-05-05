@@ -29,14 +29,14 @@ def _parse_path(path):
     @return: Album, Photo
     '''
     album_list = AlbumList.get()
-    album = album_list.get_album(path)
+    album = album_list.albums.get(path)
     if album:
         return album, None
     album_title, photo_title = os.path.split(path)
-    album = album_list.get_album(album_title)
+    album = album_list.albums.get(album_title)
     if album is None:
         return None, None
-    photo = album.get_photo(photo_title)
+    photo = album.photos.get(photo_title)
     return album, photo
 
 
@@ -78,10 +78,10 @@ class FotkiFilesystem(fuse.Fuse):
         info = fuse.Stat()
         info.st_mode = stat.S_IFREG | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         info.st_nlink = 1
-        info.st_size = photo.get_size()
+        info.st_size = photo.size
         return info
 
-    def getattr(self, path):
+    def getattr(self, path): #@ReservedAssignment
         '''
         Возвращает информацию о файле.
         '''
@@ -102,20 +102,21 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Возвращает содержимое директории.
         '''
+        # TODO: давать ссылки на вложенные альбомы
         logger.debug('reading directory %s', path)
         yield fuse.Direntry('.')
         yield fuse.Direntry('..')
         album_list = AlbumList.get()
         path = _prepare_path(path)
         if not path:
-            for album in album_list.get_albums():
-                yield fuse.Direntry(album.get_title())
+            for album in album_list.albums.values():
+                yield fuse.Direntry(album.title)
         else:
-            album = album_list.get_album(path)
-            for photo in album.get_photos():
-                yield fuse.Direntry(photo.get_title())
+            album = album_list.albums[path]
+            for photo in album.photos.values():
+                yield fuse.Direntry(photo.title)
                 
-    def open(self, path, flags):
+    def open(self, path, flags): #@ReservedAssignment
         '''
         Вызывается перед попыткой открыть файл.
         '''
@@ -137,10 +138,10 @@ class FotkiFilesystem(fuse.Fuse):
         _, photo = _parse_path(path)
         if photo is None:
             return -errno.ENOENT
-        image = photo.get_image()
+        image = photo.image
         chunk = image[offset:offset + size]
         if offset + size >= len(image):
-            photo.cleanup_image()
+            photo.cleanup()
         return chunk
 
 

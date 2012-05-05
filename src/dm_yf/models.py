@@ -8,6 +8,7 @@ from hashlib import md5
 
 from dm_yf.log import logger
 from dm_yf.protocol import Service
+from dm_yf.utils import to_megabytes
 
 # Адрес сервисного документа:
 SERVICE_URL = 'http://api-fotki.yandex.ru/api/me/'
@@ -48,56 +49,39 @@ class AlbumList(object):
         self._albums = None
         self._resource = resource
         
-    def __contains__(self, title):
-        '''
-        @param title: string
-        '''
-        return self.get_album(title) is not None
-        
     def _load_albums(self):
         '''
         Загружает список альбомов.
         '''
         logger.info('loading album list')
         albums = []
-        for resource in self._resource.get_albums():
+        for resource in self._resource.albums:
             album = Album(resource)
             albums.append(album)
         logger.info('album list loaded, %s albums found', len(albums))
         self._albums = albums
-        
-    def get_albums(self):
+    
+    @property
+    def albums(self):
         '''
         Возвращает список альбомов.
         @return: string
         '''
         if self._albums is None:
             self._load_albums()
-        return self._albums
+        return dict((album.title, album) for album in self._albums)
     
-    def get_album(self, title):
-        '''
-        Возвращает альбом по названию.
-        @param title: string
-        @return: Album
-        '''
-        for album in self.get_albums():
-            if album.get_title() == title:
-                return album
-        return None
-    
-    def add_album(self, title):
+    def add(self, title):
         '''
         Добавляет новый альбом и возвращает его.
         @param title: string
         @return: Album
         '''
         logger.info('adding album "%s"', title)
-        resource = self._resource.add_album(title)
+        resource = self._resource.add(title)
         album = Album(resource)
-        if self._albums is None:
-            self._load_albums()
-        self._albums.append(album)
+        if self._albums is not None:
+            self._albums.append(album)
         logger.info('album "%s" added', album)
         return album
 
@@ -115,28 +99,24 @@ class Album(object):
         self._resource = resource
         
     def __str__(self):
-        return '%s (%s)'%(self.get_title(), self.get_photo_count())
+        return '%s (%s)'%(self.title, self.photo_count)
     
-    def __contains__(self, title):
-        '''
-        @param title: string
-        '''
-        return self.get_photo(title) is not None
-        
-    def get_title(self):
+    @property
+    def title(self):
         '''
         Возвращает название альбома.
         @return: string
         '''
-        return self._resource.get_title()
+        return self._resource.title
     
-    def get_photo_count(self):
+    @property
+    def photo_count(self):
         '''
         Возвращает количество фотографий в альбоме.
         @return: int
         '''
         if self._photos is None:
-            return self._resource.get_photo_count()
+            return self._resource.photo_count
         return len(self._photos)
     
     def _load_photos(self):
@@ -145,33 +125,23 @@ class Album(object):
         '''
         logger.info('loading photo list for album "%s"', self)
         photos = []
-        for resource in self._resource.get_photos():
+        for resource in self._resource.photos:
             photo = Photo(resource)
             photos.append(photo)
         logger.info('photo list loaded for album "%s", %s photos found', self, len(photos))
         self._photos = photos
     
-    def get_photos(self):
+    @property
+    def photos(self):
         '''
         Возвращает список фотографий.
         @return: list
         '''
         if self._photos is None:
             self._load_photos()
-        return self._photos
+        return dict((photo.title, photo) for photo in self._photos)
     
-    def get_photo(self, title):
-        '''
-        Возвращает фотографию по названию.
-        @param title: string
-        @return: Photo
-        '''
-        for photo in self.get_photos():
-            if photo.get_title() == title:
-                return photo
-        return None
-    
-    def add_photo(self, title, path_to_image):
+    def add(self, title, path_to_image):
         '''
         Добавляет фотографию в альбом и возвращает ее.
         @param title: string
@@ -180,11 +150,10 @@ class Album(object):
         '''
         logger.info('adding photo "%s" at %s', title, path_to_image)
         image_body = open(path_to_image).read()
-        resource = self._resource.add_photo(title, image_body)
+        resource = self._resource.add(title, image_body)
         photo = Photo(resource)
-        if self._photos is None:
-            self._load_photos()
-        self._photos.append(photo)
+        if self._photos is not None:
+            self._photos.append(photo)
         logger.info('photo "%s" added', photo)
         return photo
 
@@ -205,45 +174,38 @@ class Photo(object):
         self._resource = resource
         
     def __str__(self):
-        return '%s (%sM)'%(self.get_title(), self.get_size(True))
-    
-    def get_id(self):
-        '''
-        Возвращает идентификатор фотографии.
-        @return: string
-        '''
-        return self._resource.get_id()
-        
-    def get_title(self):
+        return '%s (%sM)'%(self.title, to_megabytes(self.size))
+
+    @property
+    def title(self):
         '''
         Возвращает название фотографии.
         Если название не задано, генерирует название из идентификатора фотографии.
         @return: string
         '''
-        title = self._resource.get_title()
+        title = self._resource.title
         if title == self.DEFAULT_TITLE:
-            return '%s.jpg'%md5(self.get_id()).hexdigest()
+            return '%s.jpg'%md5(self._resource.remote_id).hexdigest()
         return title
     
-    def get_size(self, as_megabytes=False):
+    @property
+    def size(self):
         '''
         Возвращает размер фотографии в байтах.
         @return: int
         '''
-        size = self._resource.get_size()
-        if as_megabytes:
-            return round(float(size) / 2**20, 2)
-        return size
+        return self._resource.size
     
     def _load_image(self):
         '''
         Загружает тело фотографии.
         '''
         logger.info('loading photo "%s"', self)
-        self._image = self._resource.get_content()
+        self._image = self._resource.content
         logger.info('photo "%s" loaded', self)
-        
-    def get_image(self):
+    
+    @property
+    def image(self):
         '''
         Возвращает тело фотографии.
         @return: string
@@ -252,7 +214,7 @@ class Photo(object):
             self._load_image()
         return self._image
     
-    def cleanup_image(self):
+    def cleanup(self):
         '''
         Очищает кэшированное тело фотографии.
         Необходимо обязательно вызывать, если тело больше не нужно.
