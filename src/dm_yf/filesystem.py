@@ -67,8 +67,9 @@ class FotkiFilesystem(fuse.Fuse):
         info = fuse.Stat()
         info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         info.st_nlink = 3
-        info.st_uid = os.getuid()
-        info.st_gid = os.getgid()
+        context = self.GetContext()
+        info.st_uid = context['uid']
+        info.st_gid = context['gid']
         info.st_size = album.photo_count
         info.st_atime = to_timestamp(datetime.utcnow())
         info.st_mtime = to_timestamp(album.updated)
@@ -86,8 +87,9 @@ class FotkiFilesystem(fuse.Fuse):
         info = fuse.Stat()
         info.st_mode = stat.S_IFREG | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         info.st_nlink = 1
-        info.st_uid = os.getuid()
-        info.st_gid = os.getgid()
+        context = self.GetContext()
+        info.st_uid = context['uid']
+        info.st_gid = context['gid']
         info.st_size = photo.size
         info.st_atime = to_timestamp(datetime.utcnow())
         info.st_mtime = to_timestamp(photo.updated)
@@ -109,7 +111,19 @@ class FotkiFilesystem(fuse.Fuse):
         if info:
             return info
         return -errno.ENOENT
-
+    
+    def mkdir(self, path, mode):
+        '''
+        Создает директорию.
+        '''
+        logger.debug('creating directory %s', path)
+        path = _prepare_path(path)
+        album, photo = _parse_path(path)
+        if album or photo:
+            return -errno.EEXIST
+        album_list = AlbumList.get()
+        album_list.add(path)
+        
     def readdir(self, path, offset):
         '''
         Возвращает содержимое директории.
@@ -127,19 +141,7 @@ class FotkiFilesystem(fuse.Fuse):
             album = album_list.albums[path]
             for photo in album.photos.values():
                 yield fuse.Direntry(photo.title)
-                
-    def mkdir(self, path, mode):
-        '''
-        Создает директорию.
-        '''
-        logger.debug('creating directory %s', path)
-        path = _prepare_path(path)
-        album, photo = _parse_path(path)
-        if album or photo:
-            return -errno.EEXIST
-        album_list = AlbumList.get()
-        album_list.add(path)
-                
+    
     def open(self, path, flags): #@ReservedAssignment
         '''
         Вызывается перед попыткой открыть файл.
