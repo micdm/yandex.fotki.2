@@ -53,7 +53,14 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         info = fuse.Stat()
         info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
-        info.st_nlink = 3
+        album_list = AlbumList.get()
+        # Для директорий высчитывается как 2 + количество поддиректорий:
+        info.st_nlink = 2 + len(album_list.albums)
+        context = self.GetContext()
+        info.st_uid = context['uid']
+        info.st_gid = context['gid']
+        album_list = AlbumList.get()
+        info.st_size = len(album_list.albums)
         return info
     
     def _getattr_for_album(self, path):
@@ -66,7 +73,8 @@ class FotkiFilesystem(fuse.Fuse):
         logger.debug('%s is album', path)
         info = fuse.Stat()
         info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
-        info.st_nlink = 3
+        # Для директорий высчитывается как 2 + количество поддиректорий:
+        info.st_nlink = 2
         context = self.GetContext()
         info.st_uid = context['uid']
         info.st_gid = context['gid']
@@ -86,6 +94,7 @@ class FotkiFilesystem(fuse.Fuse):
         logger.debug('%s is photo', path)
         info = fuse.Stat()
         info.st_mode = stat.S_IFREG | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        # Для обычного файла равно 1:
         info.st_nlink = 1
         context = self.GetContext()
         info.st_uid = context['uid']
