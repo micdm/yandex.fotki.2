@@ -128,6 +128,18 @@ class FotkiFilesystem(fuse.Fuse):
             for photo in album.photos.values():
                 yield fuse.Direntry(photo.title)
                 
+    def mkdir(self, path, mode):
+        '''
+        Создает директорию.
+        '''
+        logger.debug('creating directory %s', path)
+        path = _prepare_path(path)
+        album, photo = _parse_path(path)
+        if album or photo:
+            return -errno.EEXIST
+        album_list = AlbumList.get()
+        album_list.add(path)
+                
     def open(self, path, flags): #@ReservedAssignment
         '''
         Вызывается перед попыткой открыть файл.
