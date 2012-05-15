@@ -157,15 +157,14 @@ class Album(object):
             self._load_photos()
         return dict((photo.title, photo) for photo in self._photos)
     
-    def add(self, title, path_to_image):
+    def add(self, title, image_body):
         '''
         Добавляет фотографию в альбом и возвращает ее.
         @param title: string
-        @param path_to_image: string
+        @param image_body: string
         @return: Photo
         '''
-        logger.info('adding photo "%s" at %s', title, path_to_image)
-        image_body = open(path_to_image).read()
+        logger.info('adding photo "%s"', title)
         resource = self._resource.add(title, image_body)
         photo = Photo(resource)
         if self._photos is not None:

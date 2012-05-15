@@ -32,31 +32,20 @@ def _log_exception(func):
     return wrapper
 
 
-def _prepare_path(path):
+class PathInfo(object):
     '''
-    Подправляет путь: удаляет ведущий слеш.
-    @param path: string
-    @return: string
+    Информация о пути.
     '''
-    return path.replace(os.path.sep, '', 1)
-
-
-def _parse_path(path):
-    '''
-    Разбирает путь и возвращает альбом и фотографию, которые находятся по этому пути.
-    @param path: string
-    @return: Album, Photo
-    '''
-    album_list = AlbumList.get()
-    album = album_list.albums.get(path)
-    if album:
-        return album, None
-    album_title, photo_title = os.path.split(path)
-    album = album_list.albums.get(album_title)
-    if album is None:
-        return None, None
-    photo = album.photos.get(photo_title)
-    return album, photo
+    
+    def __init__(self, album=None, photo=None, buffer=None): #@ReservedAssignment
+        '''
+        @param album: Album
+        @param photo: Photo
+        @param buffer: file
+        '''
+        self.album = album
+        self.photo = photo
+        self.buffer = buffer
 
 
 class FotkiFilesystem(fuse.Fuse):
@@ -67,10 +56,51 @@ class FotkiFilesystem(fuse.Fuse):
     def __init__(self, *args, **kwargs):
         super(FotkiFilesystem, self).__init__(*args, **kwargs)
         self._buffers = {}
+        
+    def _prepare_path(self, path):
+        '''
+        Подправляет путь: удаляет ведущий слеш.
+        @param path: string
+        @return: string
+        '''
+        return path.replace(os.path.sep, '', 1)
+    
+    def _split_path(self, path):
+        '''
+        Разбиавет путь и возвращает название альбома + название фотографии.
+        @param path: string
+        @return: string, string
+        '''
+        return os.path.split(path)
+        
+    def _parse_path(self, path):
+        '''
+        Разбирает путь и возвращает информацию относительно альбома и фотографии,
+        которые могут находиться по этому пути.
+        @param path: string
+        @return: PathInfo
+        '''
+        album_list = AlbumList.get()
+        if os.path.splitext(path)[1] == '.jpg':
+            if path in self._buffers:
+                return PathInfo(buffer=self._buffers[path])
+            album_title, photo_title = self._split_path(path)
+            album = album_list.albums.get(album_title)
+            if album is None:
+                return PathInfo()
+            photo = album.photos.get(photo_title)
+            if photo:
+                return PathInfo(photo=photo)
+            return PathInfo()
+        album = album_list.albums.get(path)
+        if album:
+            return PathInfo(album=album)
+        return PathInfo()
 
     def _getattr_for_root(self):
         '''
         Возвращает информацию для коревой директории.
+        @return: Stat
         '''
         info = fuse.Stat()
         info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
@@ -84,14 +114,12 @@ class FotkiFilesystem(fuse.Fuse):
         info.st_size = len(album_list.albums)
         return info
     
-    def _getattr_for_album(self, path):
+    def _getattr_for_album(self, album):
         '''
         Возвращает информацию для альбома.
+        @param album: Album
+        @return: Stat
         '''
-        album, _ = _parse_path(path)
-        if album is None:
-            return None
-        logger.debug('%s is album', path)
         info = fuse.Stat()
         info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         # Для директорий высчитывается как 2 + количество поддиректорий:
@@ -105,14 +133,12 @@ class FotkiFilesystem(fuse.Fuse):
         info.st_ctime = to_timestamp(album.published) 
         return info
     
-    def _getattr_for_photo(self, path):
+    def _getattr_for_photo(self, photo):
         '''
         Возвращает информацию для фотографии.
+        @param photo: Photo
+        @return: Stat
         '''
-        _, photo = _parse_path(path)
-        if photo is None:
-            return None
-        logger.debug('%s is photo', path)
         info = fuse.Stat()
         info.st_mode = stat.S_IFREG | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
         # Для обычного файла равно 1:
@@ -126,15 +152,14 @@ class FotkiFilesystem(fuse.Fuse):
         info.st_ctime = to_timestamp(photo.published)
         return info
     
-    def _getattr_for_buffer(self, path):
+    def _getattr_for_buffer(self, buffer): #@ReservedAssignment
         '''
         Возвращает информацию для временного файла, в который пишется фотография.
+        @param buffer: file
+        @return: Stat
         '''
-        if path not in self._buffers:
-            return None
-        logger.debug('%s is buffer', path)
         info = fuse.Stat()
-        file_stats = os.stat(self._buffers[path].name)
+        file_stats = os.stat(buffer.name)
         info.st_mode = file_stats.st_mode
         info.st_nlink = file_stats.st_nlink
         info.st_uid = file_stats.st_uid
@@ -151,20 +176,27 @@ class FotkiFilesystem(fuse.Fuse):
         Возвращает информацию о файле.
         '''
         logger.debug('getting information about %s', path)
-        path = _prepare_path(path)
+        path = self._prepare_path(path)
         if not path:
             return self._getattr_for_root()
-        info = self._getattr_for_buffer(path)
-        if info:
-            return info
-        info = self._getattr_for_photo(path)
-        if info:
-            return info
-        info = self._getattr_for_album(path)
-        if info:
-            return info
+        path_info = self._parse_path(path)
+        if path_info.album:
+            logger.debug('%s is album', path)
+            return self._getattr_for_album(path_info.album)
+        if path_info.photo:
+            logger.debug('%s is photo', path)
+            return self._getattr_for_photo(path_info.photo)
+        if path_info.buffer:
+            logger.debug('%s is buffer', path)
+            return self._getattr_for_buffer(path_info.buffer)
         logger.debug('no resource on %s found', path)
         return -errno.ENOENT
+    
+    @_log_exception
+    def chmod(self, path, mode):
+        '''
+        Изменяет права доступа.
+        '''
     
     @_log_exception
     def mkdir(self, path, mode):
@@ -172,9 +204,9 @@ class FotkiFilesystem(fuse.Fuse):
         Создает директорию.
         '''
         logger.debug('creating directory %s', path)
-        path = _prepare_path(path)
-        album, photo = _parse_path(path)
-        if album or photo:
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
+        if path_info.album or path_info.photo:
             logger.warning('resource on %s already exists', path)
             return -errno.EEXIST
         album_list = AlbumList.get()
@@ -190,7 +222,7 @@ class FotkiFilesystem(fuse.Fuse):
         yield fuse.Direntry('.')
         yield fuse.Direntry('..')
         album_list = AlbumList.get()
-        path = _prepare_path(path)
+        path = self._prepare_path(path)
         if not path:
             for album in album_list.albums.values():
                 yield fuse.Direntry(album.title)
@@ -205,15 +237,15 @@ class FotkiFilesystem(fuse.Fuse):
         Создает пустой файл.
         '''
         logger.debug('creating %s with flags %s and mode %s', path, flags, mode)
-        path = _prepare_path(path)
-        album, photo = _parse_path(path)
-        if album and photo:
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
+        if path_info.album and path_info.photo:
             logger.warning('resource on %s already exists', path)
             return -errno.EEXIST
-        if path in self._buffers:
+        if path_info.buffer:
             logger.warning('there is buffer for %s already', path)
             return -errno.EEXIST
-        fileobj = tempfile.NamedTemporaryFile('w')
+        fileobj = tempfile.NamedTemporaryFile()
         self._buffers[path] = fileobj
         logger.debug('buffer created on %s for %s', fileobj.name, path)
     
@@ -223,15 +255,15 @@ class FotkiFilesystem(fuse.Fuse):
         Вызывается перед попыткой открыть файл.
         '''
         logger.debug('opening %s with flags %s', path, flags)
-        path = _prepare_path(path)
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
         access = os.O_RDONLY | os.O_WRONLY | os.O_RDWR
         if (flags & access) == os.O_RDONLY:
-            _, photo = _parse_path(path)
-            if photo is None:
+            if path_info.photo is None:
                 logger.warning('no photo found on %s', path)
                 return -errno.ENOENT
         if (flags & access) == os.O_WRONLY:
-            if path not in self._buffers:
+            if path_info.buffer is None:
                 logger.warning('buffer for %s not opened yet', path)
                 return -errno.EIO
         logger.warning('read or write only permitted on %s', path)
@@ -242,9 +274,9 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Возвращает порцию данных из файла.
         '''
-        logger.debug('reading %s bytes with offset %s from %s', size, offset, path)
-        path = _prepare_path(path)
-        _, photo = _parse_path(path)
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
+        photo = path_info.photo
         if photo is None:
             logger.warning('no photo found on %s', path)
             return -errno.ENOENT
@@ -259,14 +291,14 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Записывает в файл порцию данных.
         '''
-        logger.debug('writing %s bytes with offset %s to %s', len(buf), offset, path)
-        path = _prepare_path(path)
+        path = self._prepare_path(path)
         if path not in self._buffers:
             logger.warning('buffer for %s not opened yet', path)
             return -errno.EIO
         fileobj = self._buffers[path]
         fileobj.seek(offset)
         fileobj.write(buf)
+        return len(buf)
     
     @_log_exception
     def flush(self, path):
@@ -274,7 +306,7 @@ class FotkiFilesystem(fuse.Fuse):
         Заставляет файл сохранить изменения.
         '''
         logger.debug('flushing %s', path)
-        path = _prepare_path(path)
+        path = self._prepare_path(path)
         if path not in self._buffers:
             logger.warning('buffer for %s not opened yet', path)
             return -errno.EIO
@@ -286,11 +318,18 @@ class FotkiFilesystem(fuse.Fuse):
         Закрывает файл.
         '''
         logger.debug('closing %s', path)
-        path = _prepare_path(path)
-        if path not in self._buffers:
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
+        if path_info.buffer is None:
             logger.warning('buffer for %s not opened yet', path)
             return
-        self._buffers[path].close()
+        album_title, photo_title = self._split_path(path)
+        album_list = AlbumList.get()
+        album = album_list.albums[album_title]
+        fileobj = path_info.buffer
+        fileobj.seek(0)
+        album.add(photo_title, fileobj.read())
+        fileobj.close()
         del self._buffers[path]
 
 
