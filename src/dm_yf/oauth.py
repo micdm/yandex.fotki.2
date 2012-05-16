@@ -42,7 +42,10 @@ class OAuth(object):
         @return: string
         '''
         logger.debug('loading token')
-        logger.info('please copy an auth code from %s', cls._get_auth_url())
+        logger.warning('looks like you do not have token in your settings_local.py yet')
+        logger.warning('please get an auth code from %s', cls._get_auth_url())
+        logger.warning('it is better to set TOKEN variable on settings_local.py but you can just put in it here')
+        logger.warning('see README for more information')
         auth_code = raw_input()
         logger.debug('auth code is %s', auth_code)
         connection = HTTPSConnection('oauth.yandex.ru')
