@@ -194,7 +194,7 @@ class Photo(object):
     DEFAULT_TITLE = 'Фотка'
     
     # Атрибуты, которые можно взять напрямую у ресурса:
-    _ATTRIBUTES = ['title', 'published', 'updated', 'size']
+    _ATTRIBUTES = ['published', 'updated', 'size']
     
     def __init__(self, resource):
         '''
@@ -210,6 +210,18 @@ class Photo(object):
         if name in self._ATTRIBUTES:
             return getattr(self._resource, name)
         return super(Photo, self).__getattr__(name)
+    
+    @property
+    def title(self):
+        '''
+        Возвращает название фотографии.
+        Если название не задано, генерирует название из идентификатора фотографии.
+        @return: string
+        '''
+        title = self._resource.title
+        if title == self.DEFAULT_TITLE:
+            return '%s.jpg'%md5(self._resource.remote_id).hexdigest()
+        return title
 
     def _load_image(self):
         '''
