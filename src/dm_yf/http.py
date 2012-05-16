@@ -10,6 +10,13 @@ import urllib2
 from dm_yf.log import logger
 from dm_yf.oauth import OAuth
 
+
+class RequestFailed(Exception):
+    '''
+    Исключение, выбрасываемое при ошибке запроса.
+    '''
+
+
 class Request(urllib2.Request):
     '''
     HTTP-запрос.
@@ -38,6 +45,9 @@ class HttpClient(object):
     
     # Интервал между повторами запроса (секунды):
     RETRY_INTERVAL = 5
+    
+    # Количество повторов:
+    RETRY_COUNT = 5
     
     def _get_headers(self, headers):
         '''
@@ -73,9 +83,13 @@ class HttpClient(object):
         @param data: string
         @return: string
         '''
-        while True:
+        i = 1
+        while i:
             try:
                 return self._request(url, data, headers, method)
             except Exception as e:
-                logger.warning('error occured during request: %s, retrying in %s seconds', e, self.RETRY_INTERVAL)
+                logger.warning('error occured during request try #%s: %s, retrying in %s seconds', i, e, self.RETRY_INTERVAL)
                 sleep(self.RETRY_INTERVAL)
+                i += 1
+                if i > self.RETRY_COUNT:
+                    raise RequestFailed()
