@@ -217,6 +217,13 @@ class Resource(object):
         if self._resources is None:
             self._load_resources(rel)
         return self._resources
+    
+    def destroy(self):
+        '''
+        Уничтожает ресурс.
+        '''
+        url = _parse_resource_url(self._node, 'self')
+        _send_document(DOCUMENT_TYPE_ENTRY, url, None, 'DELETE')
 
 
 class AlbumListResource(Resource):
@@ -260,6 +267,23 @@ class AlbumListResource(Resource):
         if self._resources is not None:
             self._resources.append(resource)
         return resource
+    
+    def _get_album_resource(self, title):
+        for resource in self.albums:
+            if resource.title == title:
+                return resource
+        return None
+    
+    def remove(self, title):
+        '''
+        Удаляет альбом.
+        @param title: string
+        '''
+        resource = self._get_album_resource(title)
+        if resource is None:
+            return
+        resource.destroy()
+        self._resources.remove(resource)
 
 
 class AlbumResource(Resource):

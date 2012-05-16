@@ -84,6 +84,19 @@ class AlbumList(object):
             self._albums.append(album)
         logger.info('album "%s" added', album)
         return album
+    
+    def remove(self, title):
+        '''
+        Удаляет альбом.
+        @param title: string
+        '''
+        logger.info('removing album "%s"', title)
+        if title not in self.albums:
+            return
+        self._resource.remove(title)
+        album = self.albums[title]
+        self._albums.remove(album)
+        logger.info('album "%s" removed', album)
 
 
 class Album(object):

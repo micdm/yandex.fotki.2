@@ -231,6 +231,19 @@ class FotkiFilesystem(fuse.Fuse):
             album = album_list.albums[path]
             for photo in album.photos.values():
                 yield fuse.Direntry(photo.title)
+                
+    @_log_exception
+    def rmdir(self, path):
+        '''
+        Удаляет директорию.
+        '''
+        logger.debug('removing directory %s', path)
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
+        if path_info.album is None:
+            return -errno.ENOTDIR
+        album_list = AlbumList.get()
+        album_list.remove(path_info.album.title)
     
     @_log_exception
     def create(self, path, flags, mode):
