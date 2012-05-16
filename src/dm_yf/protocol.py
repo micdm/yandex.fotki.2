@@ -269,6 +269,11 @@ class AlbumListResource(Resource):
         return resource
     
     def _get_album_resource(self, title):
+        '''
+        Возвращает ресурс альбома по названию.
+        @param title: string
+        @return: AlbumResource
+        '''
         for resource in self.albums:
             if resource.title == title:
                 return resource
@@ -357,6 +362,28 @@ class AlbumResource(Resource):
         # TODO: грузить картинку и ставить заголовок в один запрос
         resource.title = title
         return resource
+    
+    def _get_photo_resource(self, title):
+        '''
+        Возвращает ресурс фотографии по названию.
+        @param title: string
+        @return: PhotoResource
+        '''
+        for resource in self.photos:
+            if resource.title == title:
+                return resource
+        return None
+    
+    def remove(self, title):
+        '''
+        Удаляет фотографию.
+        @param title: string
+        '''
+        resource = self._get_photo_resource(title)
+        if resource is None:
+            return
+        resource.destroy()
+        self._resources.remove(resource)
 
 
 class PhotoResource(Resource):

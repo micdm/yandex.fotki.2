@@ -92,6 +92,7 @@ class AlbumList(object):
         '''
         logger.info('removing album "%s"', title)
         if title not in self.albums:
+            logger.info('no album "%s" found', title)
             return
         self._resource.remove(title)
         album = self.albums[title]
@@ -168,6 +169,20 @@ class Album(object):
             self._photos.append(photo)
         logger.info('photo "%s" added', photo)
         return photo
+    
+    def remove(self, title):
+        '''
+        Удаляет фотографию.
+        @param title: string
+        '''
+        logger.info('removing photo "%s"', title)
+        if title not in self.photos:
+            logger.info('no photo "%s" found', title)
+            return
+        self._resource.remove(title)
+        photo = self.photos[title]
+        self._photos.remove(photo)
+        logger.info('photo "%s" removed', photo)
 
 
 class Photo(object):

@@ -348,6 +348,23 @@ class FotkiFilesystem(fuse.Fuse):
         Закрывает файл.
         '''
         logger.debug('closing %s', path)
+        
+    @_log_exception
+    def unlink(self, path):
+        '''
+        Удаляет файл.
+        '''
+        logger.debug('removing file %s', path)
+        path = self._prepare_path(path)
+        path_info = self._parse_path(path)
+        if path_info.album:
+            return -errno.EISDIR
+        if path_info.photo is None:
+            return -errno.ENOENT
+        album_list = AlbumList.get()
+        album_title, photo_title = self._split_path(path)
+        album = album_list.albums[album_title]
+        album.remove(photo_title)
 
 
 def start():
