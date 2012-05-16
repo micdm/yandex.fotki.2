@@ -293,10 +293,11 @@ class FotkiFilesystem(fuse.Fuse):
         Записывает в файл порцию данных.
         '''
         path = self._prepare_path(path)
-        if path not in self._buffers:
+        path_info = self._parse_path(path)
+        if path_info.buffer is None:
             logger.warning('buffer for %s not opened yet', path)
             return -errno.EIO
-        fileobj = self._buffers[path]
+        fileobj = path_info.buffer
         fileobj.seek(offset)
         fileobj.write(buf)
         return len(buf)
@@ -305,13 +306,28 @@ class FotkiFilesystem(fuse.Fuse):
     def flush(self, path):
         '''
         Заставляет файл сохранить изменения.
+        Делаем тут опасное допущение, что метод будет вызван всего один раз.
+        В моем Debian Wheezy утилита cp v8.13 делает именно один вызов.
+        Почему нельзя сделать все то же самое в методе release? Можно, но тогда cp не будет
+        дожидаться завершения выгрузки фотографии на сервер.
+        Было бы неплохо придумать, как переместить все в release и заставить cp дождаться
+        окончания выгрузки.
         '''
         logger.debug('flushing %s', path)
         path = self._prepare_path(path)
-        if path not in self._buffers:
+        path_info = self._parse_path(path)
+        if path_info.buffer is None:
             logger.warning('buffer for %s not opened yet', path)
             return -errno.EIO
-        self._buffers[path].flush()
+        album_title, photo_title = self._split_path(path)
+        album_list = AlbumList.get()
+        album = album_list.albums[album_title]
+        fileobj = path_info.buffer
+        fileobj.flush()
+        fileobj.seek(0)
+        album.add(photo_title, fileobj.read())
+        fileobj.close()
+        del self._buffers[path]
     
     @_log_exception
     def release(self, path, fh):
@@ -319,19 +335,6 @@ class FotkiFilesystem(fuse.Fuse):
         Закрывает файл.
         '''
         logger.debug('closing %s', path)
-        path = self._prepare_path(path)
-        path_info = self._parse_path(path)
-        if path_info.buffer is None:
-            logger.warning('buffer for %s not opened yet', path)
-            return
-        album_title, photo_title = self._split_path(path)
-        album_list = AlbumList.get()
-        album = album_list.albums[album_title]
-        fileobj = path_info.buffer
-        fileobj.seek(0)
-        album.add(photo_title, fileobj.read())
-        fileobj.close()
-        del self._buffers[path]
 
 
 def start():
