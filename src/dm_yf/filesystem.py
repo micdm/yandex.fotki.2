@@ -297,10 +297,12 @@ class FotkiFilesystem(fuse.Fuse):
             if path_info.photo is None:
                 logger.warning('no photo found on %s', path)
                 return -errno.ENOENT
+            return None
         if (flags & access) == os.O_WRONLY:
             if path_info.buffer is None:
                 logger.warning('buffer for %s not opened yet', path)
                 return -errno.EIO
+            return None
         logger.warning('read or write only permitted on %s', path)
         return -errno.EACCES
         
