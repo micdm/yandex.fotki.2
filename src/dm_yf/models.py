@@ -91,6 +91,9 @@ class Album(object):
     Альбом.
     '''
     
+    # Атрибуты, которые можно взять напрямую у ресурса:
+    _ATTRIBUTES = ['title', 'published', 'updated']
+    
     def __init__(self, resource):
         '''
         @param resource: Resource
@@ -101,30 +104,11 @@ class Album(object):
     def __str__(self):
         return '%s (%s)'%(self.title, self.photo_count)
     
-    @property
-    def title(self):
-        '''
-        Возвращает название альбома.
-        @return: string
-        '''
-        return self._resource.title
-    
-    @property
-    def published(self):
-        '''
-        Возвращает дату публикации альбома.
-        @return: datetime
-        '''
-        return self._resource.published
-    
-    @property
-    def updated(self):
-        '''
-        Возвращает дату изменения альбома.
-        @return: datetime
-        '''
-        return self._resource.updated
-    
+    def __getattr__(self, name):
+        if name in self._ATTRIBUTES:
+            return getattr(self._resource, name)
+        return super(Album, self).__getattr__(name)
+
     @property
     def photo_count(self):
         '''
@@ -181,6 +165,9 @@ class Photo(object):
     # Название фотографии по умолчанию, которое ставит сам сервис:
     DEFAULT_TITLE = 'Фотка'
     
+    # Атрибуты, которые можно взять напрямую у ресурса:
+    _ATTRIBUTES = ['title', 'published', 'updated', 'size']
+    
     def __init__(self, resource):
         '''
         @param resource: Resource
@@ -190,43 +177,12 @@ class Photo(object):
         
     def __str__(self):
         return '%s (%sM)'%(self.title, to_megabytes(self.size))
+    
+    def __getattr__(self, name):
+        if name in self._ATTRIBUTES:
+            return getattr(self._resource, name)
+        return super(Photo, self).__getattr__(name)
 
-    @property
-    def title(self):
-        '''
-        Возвращает название фотографии.
-        Если название не задано, генерирует название из идентификатора фотографии.
-        @return: string
-        '''
-        title = self._resource.title
-        if title == self.DEFAULT_TITLE:
-            return '%s.jpg'%md5(self._resource.remote_id).hexdigest()
-        return title
-    
-    @property
-    def published(self):
-        '''
-        Возвращает дату публикации фотографии.
-        @return: datetime
-        '''
-        return self._resource.published
-    
-    @property
-    def updated(self):
-        '''
-        Возвращает дату изменения фотографии.
-        @return: datetime
-        '''
-        return self._resource.updated
-    
-    @property
-    def size(self):
-        '''
-        Возвращает размер фотографии в байтах.
-        @return: int
-        '''
-        return self._resource.size
-    
     def _load_image(self):
         '''
         Загружает тело фотографии.
