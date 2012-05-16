@@ -58,6 +58,13 @@ class FotkiFilesystem(fuse.Fuse):
         self.multithreaded = False
         self._buffers = {}
         
+    def _is_removing_allowed(self):
+        '''
+        Возвращает, разрешено ли удаление альбомов и фотографий.
+        @return: bool
+        '''
+        return bool(self.cmdline[0].is_removing_allowed)
+        
     def _prepare_path(self, path):
         '''
         Подправляет путь: удаляет ведущий слеш.
@@ -97,6 +104,17 @@ class FotkiFilesystem(fuse.Fuse):
         if album:
             return PathInfo(album=album)
         return PathInfo()
+    
+    def _get_access_mode(self, is_directory):
+        '''
+        Возвращает режим доступа.
+        @param is_directory: bool
+        @return: bool
+        '''
+        default = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        if self._is_removing_allowed() and is_directory:
+            return default | stat.S_IWUSR | stat.S_IXUSR
+        return default
 
     def _getattr_for_root(self):
         '''
@@ -104,7 +122,7 @@ class FotkiFilesystem(fuse.Fuse):
         @return: Stat
         '''
         info = fuse.Stat()
-        info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        info.st_mode = stat.S_IFDIR | self._get_access_mode(True)
         album_list = AlbumList.get()
         # Для директорий высчитывается как 2 + количество поддиректорий:
         info.st_nlink = 2 + len(album_list.albums)
@@ -122,7 +140,7 @@ class FotkiFilesystem(fuse.Fuse):
         @return: Stat
         '''
         info = fuse.Stat()
-        info.st_mode = stat.S_IFDIR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        info.st_mode = stat.S_IFDIR | self._get_access_mode(True)
         # Для директорий высчитывается как 2 + количество поддиректорий:
         info.st_nlink = 2
         context = self.GetContext()
@@ -141,7 +159,7 @@ class FotkiFilesystem(fuse.Fuse):
         @return: Stat
         '''
         info = fuse.Stat()
-        info.st_mode = stat.S_IFREG | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        info.st_mode = stat.S_IFREG | self._get_access_mode(False)
         # Для обычного файла равно 1:
         info.st_nlink = 1
         context = self.GetContext()
@@ -161,7 +179,7 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         info = fuse.Stat()
         file_stats = os.stat(buffer.name)
-        info.st_mode = file_stats.st_mode
+        info.st_mode = stat.S_IFREG | self._get_access_mode(False)
         info.st_nlink = file_stats.st_nlink
         info.st_uid = file_stats.st_uid
         info.st_gid = file_stats.st_gid
@@ -237,8 +255,10 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Удаляет директорию.
         '''
-        # TODO: проверять, можно ли удалять альбомы
         logger.debug('removing directory %s', path)
+        if not self._is_removing_allowed():
+            logger.debug('removing not permitted, see --help')
+            return -errno.EPERM
         path = self._prepare_path(path)
         path_info = self._parse_path(path)
         if path_info.album is None:
@@ -355,8 +375,10 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Удаляет файл.
         '''
-        # TODO: проверять, можно ли удалять фотографии
         logger.debug('removing file %s', path)
+        if not self._is_removing_allowed():
+            logger.debug('removing not permitted, see --help')
+            return -errno.EPERM
         path = self._prepare_path(path)
         path_info = self._parse_path(path)
         if path_info.album:
@@ -377,5 +399,7 @@ def start():
     set_logger_verbose()
     fuse.fuse_python_api = (0, 2)
     fs = FotkiFilesystem()
+    fs.parser.add_option('--allow-removing', action='store_true', dest='is_removing_allowed',
+                         help='allow to remove albums and photos')
     fs.parse()
     fs.main()
