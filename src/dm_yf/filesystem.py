@@ -55,6 +55,7 @@ class FotkiFilesystem(fuse.Fuse):
     
     def __init__(self, *args, **kwargs):
         super(FotkiFilesystem, self).__init__(*args, **kwargs)
+        self.multithreaded = False
         self._buffers = {}
         
     def _prepare_path(self, path):
