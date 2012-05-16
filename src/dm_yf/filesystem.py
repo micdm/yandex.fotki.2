@@ -89,7 +89,7 @@ class FotkiFilesystem(fuse.Fuse):
         @return: PathInfo
         '''
         album_list = AlbumList.get()
-        if os.path.splitext(path)[1] == '.jpg':
+        if os.path.splitext(path)[1].lower() == '.jpg':
             if path in self._buffers:
                 return PathInfo(buffer=self._buffers[path])
             album_title, photo_title = self._split_path(path)
