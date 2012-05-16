@@ -7,8 +7,9 @@
 from datetime import datetime
 from xml.etree.ElementTree import fromstring, tostring, Element, TreeBuilder, QName
 
-from dm_yf.http import HttpClient
+from dm_yf.http import HttpRequest, HttpClient
 from dm_yf.log import logger
+
 
 # Пространства имен:
 APP_NS = 'http://www.w3.org/2007/app'
@@ -17,6 +18,7 @@ FOTKI_NS = 'yandex:fotki'
 
 DOCUMENT_TYPE_ENTRY = 'entry'
 DOCUMENT_TYPE_IMAGE = 'image'
+
 
 def _get_document(url):
     '''
@@ -28,14 +30,14 @@ def _get_document(url):
     return http_client.request(url)
 
 
-def _send_document(document_type, url, body, method='POST'):
+def _send_document(method, document_type, url, body):
     '''
     Отправляет документ на указанный адрес.
     Возвращает ответ сервера.
+    @param method: string
     @param document_type: string
     @param url: string
     @param body: string
-    @param method: string
     @return: string
     '''
     if document_type == DOCUMENT_TYPE_ENTRY:
@@ -222,8 +224,9 @@ class Resource(object):
         '''
         Уничтожает ресурс.
         '''
+        # TODO: операция уничтожения должна производиться извне
         url = _parse_resource_url(self._node, 'self')
-        _send_document(DOCUMENT_TYPE_ENTRY, url, None, 'DELETE')
+        _send_document(HttpRequest.METHOD_DELETE, DOCUMENT_TYPE_ENTRY, url, None)
 
 
 class AlbumListResource(Resource):
@@ -262,7 +265,7 @@ class AlbumListResource(Resource):
         '''
         url = _parse_resource_url(self._node, 'self')
         body = self._get_new_album_body(title)
-        document = _send_document(DOCUMENT_TYPE_ENTRY, url, body)
+        document = _send_document(HttpRequest.METHOD_POST, DOCUMENT_TYPE_ENTRY, url, body)
         resource = _parse_resource(fromstring(document))
         if self._resources is not None:
             self._resources.append(resource)
@@ -355,7 +358,7 @@ class AlbumResource(Resource):
         @return: Resource
         '''
         url = _parse_resource_url(self._node, 'photos')
-        document = _send_document(DOCUMENT_TYPE_IMAGE, url, image_body)
+        document = _send_document(HttpRequest.METHOD_POST, DOCUMENT_TYPE_IMAGE, url, image_body)
         resource = _parse_resource(fromstring(document))
         if self._resources is not None:
             self._resources.append(resource)
@@ -424,8 +427,7 @@ class PhotoResource(Resource):
         url = _parse_resource_url(self._node, 'edit')
         title_node = self._get_node_by_name('title')
         title_node.text = title
-        # TODO: убрать явное указание метода
-        _send_document(DOCUMENT_TYPE_ENTRY, url, tostring(self._node), 'PUT')
+        _send_document(HttpRequest.METHOD_PUT, DOCUMENT_TYPE_ENTRY, url, tostring(self._node))
         
     @property
     def published(self):

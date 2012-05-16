@@ -237,6 +237,7 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Удаляет директорию.
         '''
+        # TODO: проверять, можно ли удалять альбомы
         logger.debug('removing directory %s', path)
         path = self._prepare_path(path)
         path_info = self._parse_path(path)
@@ -354,6 +355,7 @@ class FotkiFilesystem(fuse.Fuse):
         '''
         Удаляет файл.
         '''
+        # TODO: проверять, можно ли удалять фотографии
         logger.debug('removing file %s', path)
         path = self._prepare_path(path)
         path_info = self._parse_path(path)

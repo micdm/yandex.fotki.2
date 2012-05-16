@@ -11,17 +11,23 @@ from dm_yf.log import logger
 from dm_yf.oauth import OAuth
 
 
-class RequestFailed(Exception):
+class HttpRequestFailed(Exception):
     '''
     Исключение, выбрасываемое при ошибке запроса.
     '''
 
 
-class Request(urllib2.Request):
+class HttpRequest(urllib2.Request):
     '''
     HTTP-запрос.
     Умеет использовать методы, отличные от GET и POST.
     '''
+    
+    # Методы:
+    METHOD_GET = 'GET'
+    METHOD_POST = 'POST'
+    METHOD_PUT = 'PUT'
+    METHOD_DELETE = 'DELETE'
     
     @classmethod
     def get(cls, method, *args, **kwargs):
@@ -69,12 +75,12 @@ class HttpClient(object):
         '''
         logger.debug('loading url %s', url)
         headers = self._get_headers(headers)
-        request = Request.get(method, url, data, headers)
+        request = HttpRequest.get(method, url, data, headers)
         response = urllib2.urlopen(request).read()
         logger.debug('%s bytes loaded from url %s', len(response), url)
         return response
     
-    def request(self, url, data=None, headers=None, method='GET'):
+    def request(self, url, data=None, headers=None, method=HttpRequest.METHOD_GET):
         '''
         Выполняет запрос и возвращает тело ответа.
         Делает бесконечное число попыток, если запрос не проходит.
@@ -92,4 +98,4 @@ class HttpClient(object):
                 sleep(self.RETRY_INTERVAL)
                 i += 1
                 if i > self.RETRY_COUNT:
-                    raise RequestFailed()
+                    raise HttpRequestFailed()
